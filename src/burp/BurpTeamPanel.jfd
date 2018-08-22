@@ -4,13 +4,13 @@ new FormModel {
 	contentType: "form/swing"
 	root: new FormRoot {
 		add( new FormContainer( "javax.swing.JPanel", new FormLayoutManager( class org.jdesktop.layout.GroupLayout ) {
-			"$horizontalGroup": "par l {seq {space :::p, par l {comp Explainer:::p:378:p, par t:l::p {seq l {comp TheirListenAddress:::p::p, space u:::p, comp TheirAddress::::90:x}, seq l {par l {comp yourListenPort::l:p::p, comp theirListenPort::l:p::p}, space u:::p, par l:::p {comp ThierPort::::90:x, comp YourPort::::90:x}}}, seq l {comp StartButton:::p::p, space :::p, comp StopButton:::p::p}}, space ::16:x}}"
-			"$verticalGroup": "par l {seq l {space :::p, comp Explainer:::p:52:p, space :::p, par b {comp yourListenPort::b:p::p, comp YourPort::b:p::p}, space :p:6:p, par b {comp theirListenPort::b:p::p, comp ThierPort::b:p::p}, space :p:6:p, par b {comp TheirListenAddress::b:p::p, comp TheirAddress::b:p::p}, space :::p, par b {comp StartButton::b:p::p, comp StopButton::b:p::p}, space ::114:x}}"
+			"$horizontalGroup": "par l {seq l {space :::p, par l {seq l {comp StartButton:::p::p, space :::p, comp StopButton:::p::p, space :0:0:x}, seq {par l {comp Explainer::::0:x, seq {par t {seq l {comp TheirListenAddress:::p::p, space s:::p, comp TheirAddress:::p:96:p, space :0:0:x}, seq {par l {comp yourListenPort::l:p::p, comp theirListenPort::l:p::p}, space :::x, par l {comp YourPort:::p:96:p, comp ThierPort:::p:96:p}}}, par l {seq {space :p:17:p, par l {comp replayReqChkBox::::169:x, comp shareRepeaterReqChkBox:::::x}}, seq t {space ::17:x, comp verboseDebuggingChk:::p:169:p}}}}, space :::p}}}}"
+			"$verticalGroup": "par l {seq l {space :::p, comp Explainer:::p:52:p, space :::p, par b {comp yourListenPort::b:p::p, comp replayReqChkBox::b:p::p, comp YourPort::b:p::p}, space :p:10:p, par b {comp theirListenPort::b:p::p, comp shareRepeaterReqChkBox::b:p::p, comp ThierPort::b:p::p}, space u:::p, par b {comp TheirListenAddress::b:p::p, comp TheirAddress::b:p::p, comp verboseDebuggingChk::b:p::p}, space :::p, par b {comp StartButton::b:p::p, comp StopButton::b:p::p}, space ::104:x}}"
 		} ) {
 			name: "this"
 			add( new FormComponent( "javax.swing.JLabel" ) {
 				name: "Explainer"
-				"text": "Welcome to the BurpSuite Team Server! This extension allows you to work in tandem with another BurpSuite user by sharing their requests with you. Any request that comes through their proxy will show up in your site map as well.\n"
+				"text": "Welcome to the BurpSuite Team Server! "
 			} )
 			add( new FormComponent( "javax.swing.JButton" ) {
 				name: "StartButton"
@@ -51,6 +51,26 @@ new FormModel {
 				auxiliary() {
 					"JavaCodeGenerator.variableName": "theirAddress"
 				}
+			} )
+			add( new FormComponent( "javax.swing.JCheckBox" ) {
+				name: "replayReqChkBox"
+				"text": "Replay Received Requests"
+				"horizontalTextPosition": 10
+				addEvent( new FormEvent( "javax.swing.event.ChangeListener", "stateChanged", "replayReqChkBoxStateChanged", true ) )
+			} )
+			add( new FormComponent( "javax.swing.JCheckBox" ) {
+				name: "shareRepeaterReqChkBox"
+				"text": "Share Burp Tool Requests"
+				"horizontalTextPosition": 10
+				"iconTextGap": 5
+				addEvent( new FormEvent( "javax.swing.event.ChangeListener", "stateChanged", "shareRepeaterReqChkBoxStateChanged", true ) )
+			} )
+			add( new FormComponent( "javax.swing.JCheckBox" ) {
+				name: "verboseDebuggingChk"
+				"text": "Verbose Debug Mode On"
+				"horizontalTextPosition": 10
+				"iconTextGap": 6
+				addEvent( new FormEvent( "javax.swing.event.ChangeListener", "stateChanged", "verboseDebuggingChkStateChanged", true ) )
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 0, 0 )

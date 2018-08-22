@@ -17,17 +17,22 @@ public class PostHandler implements HttpHandler {
     private final PrintWriter stdout;
     private IBurpExtenderCallbacks callbacks;
     private Gson gson;
-    public PostHandler(PrintWriter stdout, IBurpExtenderCallbacks callbacks) {
+    private SharedValues sharedValues;
+
+    public PostHandler(PrintWriter stdout, IBurpExtenderCallbacks callbacks, SharedValues sharedValues) {
         this.stdout = stdout;
         this.callbacks = callbacks;
         this.gson = new Gson();
+        this.sharedValues = sharedValues;
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         String requestMethod = exchange.getRequestMethod();
         if (requestMethod.equalsIgnoreCase("POST")) {
-            stdout.println("Got request");
+            if(this.sharedValues.getVerboseDebug()){
+                stdout.println("Got request");
+            }
             String body = new BufferedReader(
                     new InputStreamReader(
                             exchange.getRequestBody()
@@ -35,14 +40,19 @@ public class PostHandler implements HttpHandler {
             ).lines().collect(Collectors.joining("\n"));
             body = URLDecoder.decode(body,"UTF-8");
             body = body.substring(body.indexOf("=")+1);
-            stdout.println(gson.fromJson(body,
-                    HttpRequestResponse.class));
             HttpRequestResponse receivedReaResp = gson.fromJson(
                     URLDecoder.decode(body, "UTF-8"),
                     HttpRequestResponse.class);
-            stdout.println("marshaled");
-            stdout.println(receivedReaResp);
-            this.callbacks.addToSiteMap(receivedReaResp);
+            if(this.sharedValues.getVerboseDebug()) {
+                stdout.println("marshaled");
+                stdout.println(receivedReaResp);
+            }
+            if(this.sharedValues.getReplayRequests() == true){
+                this.callbacks.makeHttpRequest(receivedReaResp.getHttpService
+                        (),receivedReaResp.getRequest());
+            }else {
+                this.callbacks.addToSiteMap(receivedReaResp);
+            }
             exchange.getResponseHeaders().set("Content-Type", "text/plain");
             exchange.sendResponseHeaders(200, 0);
             OutputStream responseBody = exchange.getResponseBody();

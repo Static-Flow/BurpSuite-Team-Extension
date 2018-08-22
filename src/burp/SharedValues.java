@@ -6,11 +6,13 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SharedValues implements IProxyListener {
+public class SharedValues implements IProxyListener, IHttpListener {
     private URL teammateServerUrl;
     private int teammateServerPort;
     private int yourPort;
@@ -19,6 +21,8 @@ public class SharedValues implements IProxyListener {
     private PrintWriter stderr;
     private IBurpExtenderCallbacks callbacks;
     private Gson gson;
+    private boolean replayRequests = false;
+    private boolean verboseDebug = false;
 
     public SharedValues(IBurpExtenderCallbacks callbacks){
         this.teammateServerUrl = null;
@@ -40,7 +44,8 @@ public class SharedValues implements IProxyListener {
             stderr.println(e.getMessage());
         }
         System.out.println("server started at " + yourPort);
-        server.createContext("/message", new PostHandler(stdout, callbacks));
+        server.createContext("/message", new PostHandler(stdout, callbacks,
+                this));
         server.setExecutor(null);
         server.start();
         this.callbacks.registerProxyListener(this);
@@ -48,7 +53,8 @@ public class SharedValues implements IProxyListener {
 
     public void stopCommunication(){
         server.stop(0);
-        this.callbacks.unloadExtension();
+        stdout.println("Server stopped");
+        this.callbacks.removeProxyListener(this);
     }
 
     public int getYourPort() {
@@ -92,11 +98,53 @@ public class SharedValues implements IProxyListener {
         this.teammateServerPort = teammateServerPort;
     }
 
+    public void setReplayRequests(boolean replayRequests) {
+        this.replayRequests = replayRequests;
+    }
+
+    public boolean getReplayRequests() {
+        return replayRequests;
+    }
+
+    public void startMonitoringBurpTools() {
+        this.callbacks.registerHttpListener(this);
+    }
+
+    public void stopMonitoringBurpTools() {
+        this.callbacks.removeHttpListener(this);
+    }
+
+
+    public boolean getVerboseDebug() {
+        return verboseDebug;
+    }
+
+    public void setVerboseDebug(boolean verboseDebug) {
+        this.verboseDebug = verboseDebug;
+    }
+
     @Override
     public void processProxyMessage(boolean messageIsRequest, IInterceptedProxyMessage message) {
-        stdout.println("caught request");
+        if(this.getVerboseDebug()){
+            stdout.println("caught proxy request");
+        }
         HttpRequestResponse reqResp = new HttpRequestResponse(message
                 .getMessageInfo());
+        sendHttpRequestResponse(reqResp);
+
+    }
+
+    @Override
+    public void processHttpMessage(int toolFlag, boolean messageIsRequest,
+                                   IHttpRequestResponse messageInfo) {
+        if(this.getVerboseDebug()){
+            stdout.println("caught tool request");
+        }
+        HttpRequestResponse reqResp = new HttpRequestResponse(messageInfo);
+        sendHttpRequestResponse(reqResp);
+    }
+
+    private void sendHttpRequestResponse(HttpRequestResponse reqResp) {
         URL url;
         try {
             url = this.getTeammateServerUrl();
@@ -105,24 +153,23 @@ public class SharedValues implements IProxyListener {
             con.setRequestProperty("Content-Type", "application/json");
             Map<String, String> parameters = new HashMap<>();
             String jsonReqResp = this.gson.toJson(reqResp);
-            stdout.println(jsonReqResp);
+            if(this.getVerboseDebug()){
+                stdout.println(jsonReqResp);
+            }
             parameters.put("message", this.gson.toJson(reqResp));
-            stdout.println(parameters.get("message"));
             con.setDoOutput(true);
             DataOutputStream out = new DataOutputStream(con.getOutputStream());
             out.writeBytes(ParameterStringBuilder.getParamsString(parameters));
             out.flush();
             out.close();
-            stdout.println("sent request");
-            stdout.println("Got response "+ Integer.toString(con
-                    .getResponseCode()));
-        } catch (MalformedURLException e) {
-            stderr.println(e.getMessage());
-        } catch (ProtocolException e) {
-            stderr.println(e.getMessage());
+            if(this.getVerboseDebug()) {
+                stdout.println("sent request");
+                stdout.println("Got response " + Integer.toString(con
+                        .getResponseCode()));
+            }
         } catch (IOException e) {
             stderr.println(e.getMessage());
         }
-
     }
+
 }

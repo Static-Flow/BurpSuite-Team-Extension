@@ -5,6 +5,7 @@
 package burp;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
 import java.awt.event.ActionEvent;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,7 +22,7 @@ public class BurpTeamPanel extends JPanel {
         this.sharedValues.setTeammateServerPort(Integer.parseInt(theirPort
                 .getText()));
         try {
-            URL theirUrl = new URL(theirAddress.getText()+"/message");
+            URL theirUrl = new URL("http://"+theirAddress.getText()+"/message");
             theirUrl = new URL(theirUrl.getProtocol(),theirUrl.getHost(),this
                     .sharedValues.getTeammateServerPort(),theirUrl.getFile());
             this.sharedValues.setTeammateServerUrl(theirUrl);
@@ -36,6 +37,25 @@ public class BurpTeamPanel extends JPanel {
         this.sharedValues.stopCommunication();
     }
 
+    private void replayReqChkBoxStateChanged(ChangeEvent e) {
+        //Just toggle the setting for replaying requests
+        this.sharedValues.setReplayRequests(!this.sharedValues
+                .getReplayRequests());
+    }
+
+    private void shareRepeaterReqChkBoxStateChanged(ChangeEvent e) {
+        JCheckBox startStopMonitoringBurpTools = (JCheckBox) e.getSource();
+        if(startStopMonitoringBurpTools.isSelected()){
+            this.sharedValues.startMonitoringBurpTools();
+        }else{
+            this.sharedValues.stopMonitoringBurpTools();
+        }
+    }
+
+    private void verboseDebuggingChkStateChanged(ChangeEvent e) {
+        this.sharedValues.setVerboseDebug(!this.sharedValues.getVerboseDebug());
+    }
+
     private void initComponents() {
         // JFormDesigner - Component initialization - DO NOT MODIFY  //GEN-BEGIN:initComponents
         // Generated using JFormDesigner Evaluation license - tanner barnes
@@ -48,6 +68,9 @@ public class BurpTeamPanel extends JPanel {
         theirPort = new JTextField();
         TheirListenAddress = new JLabel();
         theirAddress = new JTextField();
+        replayReqChkBox = new JCheckBox();
+        shareRepeaterReqChkBox = new JCheckBox();
+        verboseDebuggingChk = new JCheckBox();
 
         //======== this ========
 
@@ -60,7 +83,7 @@ public class BurpTeamPanel extends JPanel {
 
 
         //---- Explainer ----
-        Explainer.setText("Welcome to the BurpSuite Team Server! This extension allows you to work in tandem with another BurpSuite user by sharing their requests with you. Any request that comes through their proxy will show up in your site map as well.\n");
+        Explainer.setText("Welcome to the BurpSuite Team Server! ");
 
         //---- StartButton ----
         StartButton.setText("Start");
@@ -79,6 +102,23 @@ public class BurpTeamPanel extends JPanel {
         //---- TheirListenAddress ----
         TheirListenAddress.setText("Their IP Address:");
 
+        //---- replayReqChkBox ----
+        replayReqChkBox.setText("Replay Received Requests");
+        replayReqChkBox.setHorizontalTextPosition(SwingConstants.LEADING);
+        replayReqChkBox.addChangeListener(e -> replayReqChkBoxStateChanged(e));
+
+        //---- shareRepeaterReqChkBox ----
+        shareRepeaterReqChkBox.setText("Share Burp Tool Requests");
+        shareRepeaterReqChkBox.setHorizontalTextPosition(SwingConstants.LEADING);
+        shareRepeaterReqChkBox.setIconTextGap(5);
+        shareRepeaterReqChkBox.addChangeListener(e -> shareRepeaterReqChkBoxStateChanged(e));
+
+        //---- verboseDebuggingChk ----
+        verboseDebuggingChk.setText("Verbose Debug Mode On");
+        verboseDebuggingChk.setHorizontalTextPosition(SwingConstants.LEADING);
+        verboseDebuggingChk.setIconTextGap(6);
+        verboseDebuggingChk.addChangeListener(e -> verboseDebuggingChkStateChanged(e));
+
         GroupLayout layout = new GroupLayout(this);
         setLayout(layout);
         layout.setHorizontalGroup(
@@ -86,25 +126,39 @@ public class BurpTeamPanel extends JPanel {
                 .addGroup(layout.createSequentialGroup()
                     .addContainerGap()
                     .addGroup(layout.createParallelGroup()
-                        .addComponent(Explainer, GroupLayout.PREFERRED_SIZE, 378, GroupLayout.PREFERRED_SIZE)
-                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.TRAILING, false)
-                            .addGroup(GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                                .addComponent(TheirListenAddress)
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(theirAddress, GroupLayout.DEFAULT_SIZE, 90, Short.MAX_VALUE))
-                            .addGroup(GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                                .addGroup(layout.createParallelGroup()
-                                    .addComponent(yourListenPort)
-                                    .addComponent(theirListenPort))
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(theirPort, GroupLayout.DEFAULT_SIZE, 90, Short.MAX_VALUE)
-                                    .addComponent(yourPort, GroupLayout.DEFAULT_SIZE, 90, Short.MAX_VALUE))))
                         .addGroup(layout.createSequentialGroup()
                             .addComponent(StartButton)
                             .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(StopButton)))
-                    .addContainerGap(16, Short.MAX_VALUE))
+                            .addComponent(StopButton)
+                            .addGap(0, 0, Short.MAX_VALUE))
+                        .addGroup(layout.createSequentialGroup()
+                            .addGroup(layout.createParallelGroup()
+                                .addComponent(Explainer, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGroup(layout.createParallelGroup(GroupLayout.Alignment.TRAILING)
+                                        .addGroup(GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                                            .addComponent(TheirListenAddress)
+                                            .addGap(18, 18, 18)
+                                            .addComponent(theirAddress, GroupLayout.PREFERRED_SIZE, 96, GroupLayout.PREFERRED_SIZE)
+                                            .addGap(0, 0, Short.MAX_VALUE))
+                                        .addGroup(layout.createSequentialGroup()
+                                            .addGroup(layout.createParallelGroup()
+                                                .addComponent(yourListenPort)
+                                                .addComponent(theirListenPort))
+                                            .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                            .addGroup(layout.createParallelGroup()
+                                                .addComponent(yourPort, GroupLayout.PREFERRED_SIZE, 96, GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(theirPort, GroupLayout.PREFERRED_SIZE, 96, GroupLayout.PREFERRED_SIZE))))
+                                    .addGroup(layout.createParallelGroup()
+                                        .addGroup(layout.createSequentialGroup()
+                                            .addGap(17, 17, 17)
+                                            .addGroup(layout.createParallelGroup()
+                                                .addComponent(replayReqChkBox, GroupLayout.DEFAULT_SIZE, 169, Short.MAX_VALUE)
+                                                .addComponent(shareRepeaterReqChkBox, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                        .addGroup(GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                            .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED, 17, Short.MAX_VALUE)
+                                            .addComponent(verboseDebuggingChk, GroupLayout.PREFERRED_SIZE, 169, GroupLayout.PREFERRED_SIZE)))))
+                            .addContainerGap())))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup()
@@ -114,20 +168,23 @@ public class BurpTeamPanel extends JPanel {
                     .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                     .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                         .addComponent(yourListenPort)
+                        .addComponent(replayReqChkBox)
                         .addComponent(yourPort, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                    .addGap(6, 6, 6)
+                    .addGap(10, 10, 10)
                     .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                         .addComponent(theirListenPort)
+                        .addComponent(shareRepeaterReqChkBox)
                         .addComponent(theirPort, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                    .addGap(6, 6, 6)
+                    .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
                     .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                         .addComponent(TheirListenAddress)
-                        .addComponent(theirAddress, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(theirAddress, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(verboseDebuggingChk))
                     .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                     .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                         .addComponent(StartButton)
                         .addComponent(StopButton))
-                    .addContainerGap(114, Short.MAX_VALUE))
+                    .addContainerGap(104, Short.MAX_VALUE))
         );
         // JFormDesigner - End of component initialization  //GEN-END:initComponents
     }
@@ -143,5 +200,8 @@ public class BurpTeamPanel extends JPanel {
     private JTextField theirPort;
     private JLabel TheirListenAddress;
     private JTextField theirAddress;
+    private JCheckBox replayReqChkBox;
+    private JCheckBox shareRepeaterReqChkBox;
+    private JCheckBox verboseDebuggingChk;
     // JFormDesigner - End of variables declaration  //GEN-END:variables
 }
