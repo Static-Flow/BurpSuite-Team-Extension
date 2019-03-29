@@ -30,9 +30,6 @@ public class PostHandler implements HttpHandler {
     public void handle(HttpExchange exchange) throws IOException {
         String requestMethod = exchange.getRequestMethod();
         if (requestMethod.equalsIgnoreCase("POST")) {
-            if(this.sharedValues.getVerboseDebug()){
-                stdout.println("Got request");
-            }
             String body = new BufferedReader(
                     new InputStreamReader(
                             exchange.getRequestBody()
@@ -43,16 +40,7 @@ public class PostHandler implements HttpHandler {
             HttpRequestResponse receivedReaResp = gson.fromJson(
                     URLDecoder.decode(body, "UTF-8"),
                     HttpRequestResponse.class);
-            if(this.sharedValues.getVerboseDebug()) {
-                stdout.println("marshaled");
-                stdout.println(receivedReaResp);
-            }
-            if(this.sharedValues.getReplayRequests() == true){
-                this.callbacks.makeHttpRequest(receivedReaResp.getHttpService
-                        (),receivedReaResp.getRequest());
-            }else {
-                this.callbacks.addToSiteMap(receivedReaResp);
-            }
+            this.callbacks.addToSiteMap(receivedReaResp);
             exchange.getResponseHeaders().set("Content-Type", "text/plain");
             exchange.sendResponseHeaders(200, 0);
             OutputStream responseBody = exchange.getResponseBody();
