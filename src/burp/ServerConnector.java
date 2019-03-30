@@ -1,23 +1,13 @@
 package burp;
 
-import burp.ChatClientThread;
-import burp.HttpRequestResponse;
-import burp.IBurpExtenderCallbacks;
-import burp.IHttpRequestResponse;
-import burp.SharedValues;
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.Reader;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -26,7 +16,7 @@ implements Runnable {
     private Socket socket = null;
     private Thread thread = null;
     private BufferedReader console = null;
-    private PrintWriter streamOut = null;
+    private PrintWriter  streamOut = null;
     private ChatClientThread client = null;
     private PrintWriter stdErr = null;
     private String yourName = "";
@@ -35,7 +25,7 @@ implements Runnable {
 
     public ServerConnector(String string, int n, String string2, PrintWriter printWriter, SharedValues sharedValues) {
         System.out.println("Establishing connection. Please wait ...");
-        this.messg = new LinkedBlockingQueue<String>();
+        this.messg = new LinkedBlockingQueue<>(1);
         this.yourName = string2;
         this.sharedValues = sharedValues;
         this.stdErr = printWriter;
@@ -77,28 +67,31 @@ implements Runnable {
     }
 
     public void handle(String string) {
-        if (string != null) {
-        	System.out.println("handling message: " + string);
-            HttpRequestResponse httpRequestResponse = (HttpRequestResponse)this.sharedValues.getGson().fromJson(string.substring(string.indexOf(":") + 1), HttpRequestResponse.class);
-            this.sharedValues.getCallbacks().addToSiteMap((IHttpRequestResponse)httpRequestResponse);
+        System.out.println("handling message: " + string);
+        if (string != null && !string.equalsIgnoreCase("received")) {
+            HttpRequestResponse httpRequestResponse = this.sharedValues
+                    .getGson().fromJson(string.substring(string.indexOf(':') + 1), HttpRequestResponse.class);
+            this.sharedValues.getCallbacks().addToSiteMap(httpRequestResponse);
         }
     }
 
     public void start() throws IOException {
         this.console = new BufferedReader(new InputStreamReader(System.in));
-        this.streamOut = new PrintWriter(this.socket.getOutputStream(), true);
+        this.streamOut = new PrintWriter(this.socket
+                .getOutputStream
+                (),true);
         JsonObject senderSocket = new JsonObject();
         senderSocket.addProperty("name", this.yourName);
         senderSocket.addProperty("room", "dev");
         senderSocket.addProperty("mode", "sender");
         this.streamOut.println(senderSocket);
-        this.streamOut.flush();
         if (this.thread == null) {
             this.client = new ChatClientThread(this, this.socket, this.stdErr);
             this.thread = new Thread(this);
             this.thread.start();
         }
     }
+
 
     public void stop() {
         if (this.thread != null) {

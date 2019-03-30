@@ -1,26 +1,8 @@
-/*
- * Decompiled with CFR 0.139.
- * 
- * Could not load the following classes:
- *  burp.HttpRequestResponse
- *  burp.IBurpExtenderCallbacks
- *  burp.IHttpRequestResponse
- *  burp.IInterceptedProxyMessage
- *  burp.IProxyListener
- *  burp.ServerConnector
- *  com.google.gson.Gson
- */
 package burp;
 
-import burp.HttpRequestResponse;
-import burp.IBurpExtenderCallbacks;
-import burp.IHttpRequestResponse;
-import burp.IInterceptedProxyMessage;
-import burp.IProxyListener;
-import burp.ServerConnector;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpServer;
-import java.io.OutputStream;
+
 import java.io.PrintWriter;
 import java.net.URL;
 
@@ -46,7 +28,7 @@ implements IProxyListener {
     }
 
     public void startCommunication() {
-        this.callbacks.registerProxyListener((IProxyListener)this);
+        this.callbacks.registerProxyListener(this);
     }
 
     public void stopCommunication() {

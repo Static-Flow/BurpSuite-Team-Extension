@@ -1,20 +1,12 @@
-/*
- * Decompiled with CFR 0.139.
- * 
- * Could not load the following classes:
- *  burp.ServerConnector
- */
 package burp;
 
-import burp.ServerConnector;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.Reader;
 import java.net.Socket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 class ChatClientThread extends Thread {
     private Socket socket = null;
@@ -32,7 +24,8 @@ class ChatClientThread extends Thread {
 
     public void open() {
         try {
-            this.streamIn = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+            this.streamIn = new BufferedReader(new InputStreamReader(this.socket.getInputStream
+                    ()));
         }
         catch (IOException iOException) {
             System.out.println("Error getting input stream: " + iOException);
@@ -53,11 +46,20 @@ class ChatClientThread extends Thread {
 
     @Override
     public void run() {
+        byte[] readBuffer = new byte[5000];
         do {
             try {
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd " +
+                        "HH:mm:ss.SSS");
+                System.out.println(dateFormat.format(System.currentTimeMillis
+                        ()));
             	this.client.handle(this.streamIn.readLine());
             }
             catch (IOException iOException) {
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd " +
+                        "HH:mm:ss.SSS");
+                System.out.println(dateFormat.format(System.currentTimeMillis
+                        ()));
                 System.out.println("Listening error: " + iOException.getMessage());
                 StackTraceElement[] elements = iOException.getStackTrace();
                 for (int i = 0; i < elements.length; i++) {
@@ -65,6 +67,7 @@ class ChatClientThread extends Thread {
                   System.out.println("\tat " + s.getClassName() + "." + s.getMethodName()
                       + "(" + s.getFileName() + ":" + s.getLineNumber() + ")");
                 }
+                this.client.stop();
             }
         } while (true);
     }
