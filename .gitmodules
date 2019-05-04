@@ -1,0 +1,3 @@
+[submodule "BurpSuiteTeamServer"]
+	path = BurpSuiteTeamServer
+	url = https://github.com/Static-Flow/BurpSuiteTeamServer
