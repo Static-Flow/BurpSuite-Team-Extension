@@ -7,7 +7,6 @@
  */
 package burp;
 
-import burp.IExtensionStateListener;
 import burp.ServerConnector;
 import burp.SharedValues;
 

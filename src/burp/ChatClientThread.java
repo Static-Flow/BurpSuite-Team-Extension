@@ -49,24 +49,10 @@ class ChatClientThread extends Thread {
         byte[] readBuffer = new byte[5000];
         do {
             try {
-                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd " +
-                        "HH:mm:ss.SSS");
-                System.out.println(dateFormat.format(System.currentTimeMillis
-                        ()));
             	this.client.handle(this.streamIn.readLine());
             }
             catch (IOException iOException) {
-                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd " +
-                        "HH:mm:ss.SSS");
-                System.out.println(dateFormat.format(System.currentTimeMillis
-                        ()));
                 System.out.println("Listening error: " + iOException.getMessage());
-                StackTraceElement[] elements = iOException.getStackTrace();
-                for (int i = 0; i < elements.length; i++) {
-                  StackTraceElement s = elements[i];
-                  System.out.println("\tat " + s.getClassName() + "." + s.getMethodName()
-                      + "(" + s.getFileName() + ":" + s.getLineNumber() + ")");
-                }
                 this.client.stop();
             }
         } while (true);

@@ -67,8 +67,11 @@ implements Runnable {
     }
 
     public void handle(String string) {
-        System.out.println("handling message: " + string);
-        if (string != null && !string.equalsIgnoreCase("received")) {
+        if(string == null) {
+        	this.stop();
+        }
+        else if (!string.equalsIgnoreCase("received")) {
+            System.out.println("handling message: " + string);
             HttpRequestResponse httpRequestResponse = this.sharedValues
                     .getGson().fromJson(string.substring(string.indexOf(':') + 1), HttpRequestResponse.class);
             this.sharedValues.getCallbacks().addToSiteMap(httpRequestResponse);
@@ -92,27 +95,32 @@ implements Runnable {
         }
     }
 
-
     public void stop() {
-        if (this.thread != null) {
-            this.thread.stop();
-            this.thread = null;
-        }
+        System.out.println("stopping connection");
         try {
+            if (this.socket != null) {
+                this.socket.close();
+            }
             if (this.console != null) {
                 this.console.close();
             }
             if (this.streamOut != null) {
                 this.streamOut.close();
             }
-            if (this.socket != null) {
-                this.socket.close();
+            this.client.close();
+            this.client.stop();
+            if (this.thread != null) {
+                this.thread.stop();
+                this.thread = null;
             }
         }
         catch (IOException iOException) {
             System.out.println("Error closing ...");
         }
-        this.client.close();
-        this.client.stop();
+    }
+
+    public void leave() {
+        System.out.println("leaving server");
+        this.sendMessage("bye");
     }
 }

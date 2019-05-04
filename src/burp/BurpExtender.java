@@ -12,12 +12,8 @@ package burp;
 
 import burp.BurpTeamPanel;
 import burp.ExtentionStateListener;
-import burp.IBurpExtender;
-import burp.IBurpExtenderCallbacks;
-import burp.IExtensionStateListener;
-import burp.ITab;
 import burp.SharedValues;
-import burp.StartBurp;
+
 import java.awt.Component;
 
 public class BurpExtender
@@ -27,7 +23,7 @@ ITab {
     private SharedValues sharedValues;
 
     public static void main(String[] arrstring) {
-        StartBurp.main((String[])arrstring);
+
     }
 
     public void registerExtenderCallbacks(IBurpExtenderCallbacks iBurpExtenderCallbacks) {

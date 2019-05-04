@@ -12,7 +12,6 @@ implements IProxyListener {
     private int teammateServerPort = 0;
     private int yourPort;
     private ServerConnector serverConnector = null;
-    private HttpServer server = null;
     private PrintWriter stdout;
     private PrintWriter stderr;
     private IBurpExtenderCallbacks callbacks;
@@ -32,8 +31,8 @@ implements IProxyListener {
     }
 
     public void stopCommunication() {
-        this.server.stop(0);
-        this.callbacks.unloadExtension();
+        this.serverConnector.leave();
+        this.callbacks.removeProxyListener(this);
     }
 
     public ServerConnector getServerConnection() {
