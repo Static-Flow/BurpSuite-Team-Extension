@@ -6,30 +6,10 @@
  */
 package burp;
 
-import burp.ServerConnector;
-import burp.SharedValues;
-import java.awt.event.ActionEvent;
-import javax.swing.GroupLayout;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.LayoutStyle;
-import javax.swing.GroupLayout.Alignment;
-import javax.swing.LayoutStyle.ComponentPlacement;
-import java.awt.FlowLayout;
-import javax.swing.BoxLayout;
-import java.awt.GridLayout;
-import javax.swing.SwingConstants;
-import java.awt.GridBagLayout;
-import java.awt.GridBagConstraints;
-import java.awt.Insets;
-import javax.swing.JList;
-import javax.swing.ListSelectionModel;
-import javax.swing.AbstractListModel;
-import java.awt.BorderLayout;
-import javax.swing.JTextPane;
+import javax.swing.*;
 import javax.swing.text.BadLocationException;
+import java.awt.*;
+import java.awt.event.ActionEvent;
 
 public class BurpTeamPanel
 extends JPanel {
@@ -53,7 +33,6 @@ extends JPanel {
 
     public BurpTeamPanel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
-        System.out.println(this.sharedValues);
         this.initComponents();
     }
 
@@ -61,19 +40,22 @@ extends JPanel {
         this.sharedValues.setServerConnection(new ServerConnector(this.theirAddress.getText(),
                 Integer.parseInt(this.theirPort.getText()), this.yourName.getText(),
                 this.sharedValues.getStderr(), this.sharedValues));
-        this.sharedValues.startCommunication();
         try {
-            this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Connected to server\n", null);
+            if(this.sharedValues.getServerConnection().getSocket().isConnected()) {
+                this.sharedValues.startCommunication();
+                this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Connected to server\n", null);
+            }
         } catch (BadLocationException e) {
             System.out.println("error" + e);
         }
     }
 
     private void StopButtonActionPerformed(ActionEvent actionEvent) {
-        System.out.println(this.sharedValues);
         this.sharedValues.stopCommunication();
         try {
-            this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
+            if(!this.sharedValues.getServerConnection().getSocket().isConnected()) {
+                this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
+            }
         } catch (BadLocationException e) {
             System.out.println("error" + e);
         }
@@ -154,15 +136,7 @@ extends JPanel {
         actionPanel.setLayout(new BorderLayout(2, 2));
         
         serverList = new JList();
-        serverList.setModel(new AbstractListModel() {
-        	String[] values = new String[] {};
-        	public int getSize() {
-        		return values.length;
-        	}
-        	public Object getElementAt(int index) {
-        		return values[index];
-        	}
-        });
+        serverList.setModel(this.sharedValues.getServerListModel());
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         actionPanel.add(serverList);
     }

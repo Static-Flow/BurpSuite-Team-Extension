@@ -23,16 +23,27 @@ implements Runnable {
     private SharedValues sharedValues;
     private BlockingQueue<String> messg;
 
-    public ServerConnector(String string, int n, String string2, PrintWriter printWriter, SharedValues sharedValues) {
+
+    public ServerConnector(String serverAddress, int serverPort, String yourName,
+                           PrintWriter printWriter, SharedValues sharedValues) {
         System.out.println("Establishing connection. Please wait ...");
         this.messg = new LinkedBlockingQueue<>(1);
-        this.yourName = string2;
+        this.yourName = yourName;
         this.sharedValues = sharedValues;
         this.stdErr = printWriter;
         try {
-            this.socket = new Socket(string, n);
+            this.socket = new Socket(serverAddress, serverPort);
+            ServerWriteThread writer = new ServerWriteThread(this.socket,
+                    this.yourName, this.messg);
+            ServerListenThread listener = new ServerListenThread(this.socket,
+                    sharedValues);
+            Thread writerThread = new Thread(writer);
+            Thread listenerThread = new Thread(listener);
+            listenerThread.start();
+            writerThread.start();
+
             System.out.println("Connected: " + this.socket);
-            this.start();
+//            this.start();
         }
         catch (UnknownHostException unknownHostException) {
             System.out.println("Host unknown: " + unknownHostException.getMessage());
@@ -55,6 +66,14 @@ implements Runnable {
                 System.out.println(exception.getMessage());
             }
         }
+    }
+
+    public String getYourName() {
+        return yourName;
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 
     public void sendMessage(String string) {

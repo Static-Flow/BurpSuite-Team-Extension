@@ -1,7 +1,6 @@
 package burp;
 
 import com.google.gson.Gson;
-import com.sun.net.httpserver.HttpServer;
 
 import java.io.PrintWriter;
 import java.net.URL;
@@ -16,6 +15,8 @@ implements IProxyListener {
     private PrintWriter stderr;
     private IBurpExtenderCallbacks callbacks;
     private Gson gson;
+    private ServerListModel serverListModel;
+
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
         if (this.stdout == null && this.stderr == null) {
@@ -24,14 +25,24 @@ implements IProxyListener {
         }
         this.callbacks = iBurpExtenderCallbacks;
         this.gson = new Gson();
+        this.serverListModel = new ServerListModel();
+    }
+
+    public ServerListModel getServerListModel() {
+        return serverListModel;
     }
 
     public void startCommunication() {
         this.callbacks.registerProxyListener(this);
+        this.serverListModel.setServerConnected(true);
+        this.serverListModel.setServerConnected(true);
+        this.getServerConnection().sendMessage(
+                "newroommates");
     }
 
     public void stopCommunication() {
         this.serverConnector.leave();
+        this.serverListModel.setServerConnected(false);
         this.callbacks.removeProxyListener(this);
     }
 
