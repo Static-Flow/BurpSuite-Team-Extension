@@ -1,24 +1,10 @@
-/*
- * Decompiled with CFR 0.139.
- * 
- * Could not load the following classes:
- *  burp.IBurpExtender
- *  burp.IBurpExtenderCallbacks
- *  burp.IExtensionStateListener
- *  burp.ITab
- *  burp.StartBurp
- */
 package burp;
 
-import burp.BurpTeamPanel;
-import burp.ExtentionStateListener;
-import burp.SharedValues;
-
-import java.awt.Component;
+import java.awt.*;
 
 public class BurpExtender
 implements IBurpExtender,
-ITab {
+        ITab {
     private IBurpExtenderCallbacks callbacks;
     private SharedValues sharedValues;
 
@@ -28,10 +14,11 @@ ITab {
 
     public void registerExtenderCallbacks(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
         this.callbacks = iBurpExtenderCallbacks;
-        iBurpExtenderCallbacks.setExtensionName("Burp Team Collaborator");
+        this.callbacks.setExtensionName("Burp Team Collaborator");
         this.sharedValues = new SharedValues(this.callbacks);
-        iBurpExtenderCallbacks.registerExtensionStateListener((IExtensionStateListener)new ExtentionStateListener(this.sharedValues));
-        this.callbacks.addSuiteTab((ITab)this);
+        this.callbacks.registerExtensionStateListener(new ExtentionStateListener(this.sharedValues));
+        this.callbacks.registerContextMenuFactory(new ManualRequestSenderContextMenu(this.sharedValues));
+        this.callbacks.addSuiteTab(this);
     }
 
     public String getTabCaption() {

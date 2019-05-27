@@ -7,6 +7,7 @@ import java.net.URL;
 
 public class SharedValues
 implements IProxyListener {
+    private IExtensionHelpers extentionHelpers;
     private URL teammateServerUrl = null;
     private int teammateServerPort = 0;
     private int yourPort;
@@ -23,6 +24,7 @@ implements IProxyListener {
             this.stdout = new PrintWriter(iBurpExtenderCallbacks.getStdout(), true);
             this.stderr = new PrintWriter(iBurpExtenderCallbacks.getStderr(), true);
         }
+        this.extentionHelpers = iBurpExtenderCallbacks.getHelpers();
         this.callbacks = iBurpExtenderCallbacks;
         this.gson = new Gson();
         this.serverListModel = new ServerListModel();
@@ -100,5 +102,9 @@ implements IProxyListener {
 	        HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
 	        this.getServerConnection().sendMessage(this.gson.toJson(httpRequestResponse));
         }
+    }
+
+    public IExtensionHelpers getExtentionHelpers() {
+        return extentionHelpers;
     }
 }

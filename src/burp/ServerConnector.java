@@ -43,7 +43,6 @@ implements Runnable {
             writerThread.start();
 
             System.out.println("Connected: " + this.socket);
-//            this.start();
         }
         catch (UnknownHostException unknownHostException) {
             System.out.println("Host unknown: " + unknownHostException.getMessage());
@@ -56,8 +55,8 @@ implements Runnable {
     @Override
     public void run() {
         while (this.thread != null) {
-            if (this.messg.size() <= 0) continue;
-            System.out.println("Inside messg count" + String.valueOf(this.messg.size()));
+            if (this.messg.isEmpty()) continue;
+            System.out.println("Inside messg count" + this.messg.size());
             try {
                 this.streamOut.println(this.messg.take());
                 this.streamOut.flush();
@@ -78,8 +77,9 @@ implements Runnable {
 
     public void sendMessage(String string) {
         try {
+            System.out.println(string);
         	this.messg.put(string);
-        	System.out.println("Outside messg count" + String.valueOf(this.messg.size()));
+            System.out.println("Outside messg count" + this.messg.size());
         } catch(InterruptedException e) {
         	System.out.println(e.getMessage());
         }
@@ -90,7 +90,6 @@ implements Runnable {
         	this.stop();
         }
         else if (!string.equalsIgnoreCase("received")) {
-            System.out.println("handling message: " + string);
             HttpRequestResponse httpRequestResponse = this.sharedValues
                     .getGson().fromJson(string.substring(string.indexOf(':') + 1), HttpRequestResponse.class);
             this.sharedValues.getCallbacks().addToSiteMap(httpRequestResponse);

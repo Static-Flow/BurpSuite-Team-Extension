@@ -57,6 +57,10 @@ public class ServerListModel extends AbstractListModel<String> {
         }
     }
 
+    public ArrayList<String> getServersMembers() {
+        return this.serversMembers;
+    }
+
     @Override
     public String getElementAt(int index) {
         if(serverConnected){

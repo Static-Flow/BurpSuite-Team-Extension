@@ -7,9 +7,6 @@
  */
 package burp;
 
-import burp.ServerConnector;
-import burp.SharedValues;
-
 public class ExtentionStateListener
 implements IExtensionStateListener {
     private SharedValues sharedValues;

@@ -39,7 +39,32 @@ public class ServerListenThread implements Runnable {
                 } else if(message.startsWith("leavingroommate")){
                     String leavingUser = message.split(":")[1];
                     this.sharedValues.getServerListModel().remove(leavingUser);
-                } else{
+                } else if (message.startsWith("Repeater")) {
+                    String repeaterPayload =
+                            message.substring(message.indexOf(':') + 1);
+                    HttpRequestResponse httpRequestResponse = this.sharedValues
+                            .getGson().fromJson(repeaterPayload,
+                                    HttpRequestResponse.class);
+                    this.sharedValues.getCallbacks().sendToRepeater(
+                            httpRequestResponse.getHttpService().getHost(),
+                            httpRequestResponse.getHttpService().getPort(),
+                            httpRequestResponse.getHttpService().getProtocol()
+                                    .equalsIgnoreCase("https"),
+                            httpRequestResponse.getRequest(),
+                            "BurpTC Payload");
+                } else if (message.startsWith("Intruder")) {
+                    String intruderPayload =
+                            message.substring(message.indexOf(':') + 1);
+                    HttpRequestResponse httpRequestResponse = this.sharedValues
+                            .getGson().fromJson(intruderPayload,
+                                    HttpRequestResponse.class);
+                    this.sharedValues.getCallbacks().sendToIntruder(
+                            httpRequestResponse.getHttpService().getHost(),
+                            httpRequestResponse.getHttpService().getPort(),
+                            httpRequestResponse.getHttpService().getProtocol()
+                                    .equalsIgnoreCase("https"),
+                            httpRequestResponse.getRequest());
+                } else {
                     HttpRequestResponse httpRequestResponse = this.sharedValues
                             .getGson().fromJson(message.substring(message.indexOf(':') + 1), HttpRequestResponse.class);
                     this.sharedValues.getCallbacks().addToSiteMap(httpRequestResponse);

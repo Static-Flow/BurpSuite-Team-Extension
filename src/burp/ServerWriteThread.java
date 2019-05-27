@@ -25,11 +25,6 @@ public class ServerWriteThread  implements Runnable{
         }
     }
 
-    public void whosHere(){
-        this.streamOut.println("newroommates");
-        this.streamOut.flush();
-    }
-
     private void initConnection(String username){
         JsonObject senderSocket = new JsonObject();
         senderSocket.addProperty("name", username);

@@ -53,12 +53,11 @@ extends JPanel {
     private void StopButtonActionPerformed(ActionEvent actionEvent) {
         this.sharedValues.stopCommunication();
         try {
-            if(!this.sharedValues.getServerConnection().getSocket().isConnected()) {
-                this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
-            }
+            this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
         } catch (BadLocationException e) {
-            System.out.println("error" + e);
+            e.printStackTrace();
         }
+
     }
 
     private void initComponents() {
