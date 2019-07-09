@@ -3,7 +3,7 @@ This Burpsuite plugin allows for two testers to share live proxy requests, and r
 
 It uses a lightweight server built in Go that ferries the traffic back and forth. To run it, clone the server submodule then run the Dockerfile like so:
 ```
-   docker build -t burpserver Dockerfile
+   docker build -t burpserver
    docker run -t burpserver -p 8989:8989
 ```
 
