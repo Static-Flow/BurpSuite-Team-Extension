@@ -141,4 +141,12 @@ implements Runnable {
         System.out.println("leaving server");
         this.sendMessage("bye");
     }
+
+    public void muteMember(String selectedValue) {
+        this.sendMessage("mute:" + selectedValue);
+    }
+
+    public void unmuteMember(String selectedValue) {
+        this.sendMessage("unmute:" + selectedValue);
+    }
 }

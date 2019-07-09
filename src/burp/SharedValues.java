@@ -17,6 +17,7 @@ implements IProxyListener {
     private IBurpExtenderCallbacks callbacks;
     private Gson gson;
     private ServerListModel serverListModel;
+    private boolean communicating;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
@@ -24,6 +25,7 @@ implements IProxyListener {
             this.stdout = new PrintWriter(iBurpExtenderCallbacks.getStdout(), true);
             this.stderr = new PrintWriter(iBurpExtenderCallbacks.getStderr(), true);
         }
+        this.communicating = false;
         this.extentionHelpers = iBurpExtenderCallbacks.getHelpers();
         this.callbacks = iBurpExtenderCallbacks;
         this.gson = new Gson();
@@ -36,7 +38,7 @@ implements IProxyListener {
 
     public void startCommunication() {
         this.callbacks.registerProxyListener(this);
-        this.serverListModel.setServerConnected(true);
+        this.communicating = true;
         this.serverListModel.setServerConnected(true);
         this.getServerConnection().sendMessage(
                 "newroommates");
@@ -44,6 +46,7 @@ implements IProxyListener {
 
     public void stopCommunication() {
         this.serverConnector.leave();
+        this.communicating = false;
         this.serverListModel.setServerConnected(false);
         this.callbacks.removeProxyListener(this);
     }
@@ -96,9 +99,9 @@ implements IProxyListener {
         this.teammateServerPort = n;
     }
 
-    public void processProxyMessage(boolean bl, IInterceptedProxyMessage iInterceptedProxyMessage) {
-        this.stdout.println("caught request: "+bl);
-        if(!bl) {
+    public void processProxyMessage(boolean isResponse,
+                                    IInterceptedProxyMessage iInterceptedProxyMessage) {
+        if (!isResponse && this.communicating) {
 	        HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
 	        this.getServerConnection().sendMessage(this.gson.toJson(httpRequestResponse));
         }
@@ -107,4 +110,17 @@ implements IProxyListener {
     public IExtensionHelpers getExtentionHelpers() {
         return extentionHelpers;
     }
+
+    public boolean isCommunicating() {
+        return this.communicating;
+    }
+
+    public void pauseCommunication() {
+        this.communicating = false;
+    }
+
+    public void unpauseCommunication() {
+        this.communicating = true;
+    }
+
 }

@@ -16,6 +16,6 @@ implements IExtensionStateListener {
     }
 
     public void extensionUnloaded() {
-        this.sharedValues.getServerConnection().stop();
+        this.sharedValues.stopCommunication();
     }
 }

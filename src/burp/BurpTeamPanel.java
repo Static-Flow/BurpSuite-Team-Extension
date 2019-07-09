@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class BurpTeamPanel
 extends JPanel {
@@ -17,7 +19,6 @@ extends JPanel {
 	private SharedValues sharedValues;
     private JLabel Explainer;
     private JButton StartButton;
-    private JButton StopButton;
     private JLabel yourNameLabel;
     private JTextField yourName;
     private JLabel theirListenPort;
@@ -30,6 +31,7 @@ extends JPanel {
     private JList serverList;
     private JPanel panel;
     private JTextPane statusText;
+    private JButton PauseButton;
 
     public BurpTeamPanel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
@@ -37,27 +39,28 @@ extends JPanel {
     }
 
     private void StartButtonActionPerformed(ActionEvent actionEvent) {
-        this.sharedValues.setServerConnection(new ServerConnector(this.theirAddress.getText(),
-                Integer.parseInt(this.theirPort.getText()), this.yourName.getText(),
-                this.sharedValues.getStderr(), this.sharedValues));
-        try {
-            if(this.sharedValues.getServerConnection().getSocket().isConnected()) {
-                this.sharedValues.startCommunication();
-                this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Connected to server\n", null);
+        if (this.sharedValues.isCommunicating()) {
+            this.StartButton.setText("Connect");
+            this.sharedValues.stopCommunication();
+            try {
+                this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
+            } catch (BadLocationException e) {
+                e.printStackTrace();
             }
-        } catch (BadLocationException e) {
-            System.out.println("error" + e);
+        } else {
+            this.StartButton.setText("Disconnect");
+            this.sharedValues.setServerConnection(new ServerConnector(this.theirAddress.getText(),
+                    Integer.parseInt(this.theirPort.getText()), this.yourName.getText(),
+                    this.sharedValues.getStderr(), this.sharedValues));
+            try {
+                if (this.sharedValues.getServerConnection().getSocket().isConnected()) {
+                    this.sharedValues.startCommunication();
+                    this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Connected to server\n", null);
+                }
+            } catch (BadLocationException e) {
+                System.out.println("error" + e);
+            }
         }
-    }
-
-    private void StopButtonActionPerformed(ActionEvent actionEvent) {
-        this.sharedValues.stopCommunication();
-        try {
-            this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
-        } catch (BadLocationException e) {
-            e.printStackTrace();
-        }
-
     }
 
     private void initComponents() {
@@ -79,7 +82,11 @@ extends JPanel {
         this.Explainer = new JLabel();
         Explainer.setHorizontalAlignment(SwingConstants.CENTER);
         infoPanel.add(Explainer);
-        this.Explainer.setText("<html>Welcome to the BurpSuite Team Server! <br>This extension allows you to work in tandem with another BurpSuite user by sharing their requests with you. Any request that comes through their proxy will show up in your site map as well.</html>\n");
+        this.Explainer.setText("<html>Welcome to the BurpSuite Team " +
+                "Collaborator! <br>This extension allows you to work in " +
+                "tandem with multiple BurpSuite users by sharing their requests " +
+                "with you. Any request that comes through their proxy will " +
+                "show up in your site map as well.</html>\n");
         
         panel = new JPanel();
         GridBagConstraints gbc_panel = new GridBagConstraints();
@@ -118,12 +125,12 @@ extends JPanel {
         connectionPanel.add(theirPort);
         this.StartButton = new JButton();
         connectionPanel.add(StartButton);
-        this.StartButton.setText("Start");
-        this.StopButton = new JButton();
-        connectionPanel.add(StopButton);
-        this.StopButton.setText("Stop");
-        this.StopButton.addActionListener(actionEvent -> this.StopButtonActionPerformed(actionEvent));
-        this.StartButton.addActionListener(actionEvent -> this.StartButtonActionPerformed(actionEvent));
+        this.StartButton.setText("Connect");
+        this.PauseButton = new JButton();
+        connectionPanel.add(PauseButton);
+        this.PauseButton.setText("Pause");
+        this.PauseButton.addActionListener(this::PauseButtonActionPerformed);
+        this.StartButton.addActionListener(this::StartButtonActionPerformed);
         
         actionPanel = new JPanel();
         GridBagConstraints gbc_actionPanel = new GridBagConstraints();
@@ -133,10 +140,44 @@ extends JPanel {
         gbc_actionPanel.gridy = 1;
         add(actionPanel, gbc_actionPanel);
         actionPanel.setLayout(new BorderLayout(2, 2));
-        
+
+        JPopupMenu menu = new JPopupMenu();
+        JMenuItem unmuteClient = new JMenuItem("Unmute");
+        JMenuItem muteClient = new JMenuItem("Mute");
+        muteClient.addActionListener(e1 -> {
+            muteClient.setVisible(false);
+            unmuteClient.setVisible(true);
+            sharedValues.getServerConnection().muteMember((String) serverList.getSelectedValue());
+        });
+        unmuteClient.addActionListener(e1 -> {
+            unmuteClient.setVisible(false);
+            muteClient.setVisible(true);
+            sharedValues.getServerConnection().unmuteMember((String) serverList.getSelectedValue());
+        });
+        unmuteClient.setVisible(false);
+        menu.add(muteClient);
+        menu.add(unmuteClient);
         serverList = new JList();
+        serverList.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    serverList.setSelectedIndex(serverList.locationToIndex(e.getPoint()));
+                    menu.show(serverList, e.getPoint().x, e.getPoint().y);
+                }
+            }
+        });
         serverList.setModel(this.sharedValues.getServerListModel());
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         actionPanel.add(serverList);
+    }
+
+    private void PauseButtonActionPerformed(ActionEvent actionEvent) {
+        if (this.sharedValues.isCommunicating()) {
+            this.sharedValues.pauseCommunication();
+            this.PauseButton.setText("Unpause");
+        } else {
+            this.sharedValues.unpauseCommunication();
+            this.PauseButton.setText("Pause");
+        }
     }
 }
