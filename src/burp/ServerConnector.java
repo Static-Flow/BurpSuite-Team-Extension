@@ -1,69 +1,66 @@
 package burp;
 
-import com.google.gson.JsonObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class ServerConnector
-implements Runnable {
-    private Socket socket = null;
-    private Thread thread = null;
-    private BufferedReader console = null;
-    private PrintWriter  streamOut = null;
-    private ChatClientThread client = null;
-    private PrintWriter stdErr = null;
-    private String yourName = "";
+public class ServerConnector {
+    private PrintWriter stdErr;
+    private String serverAddress;
+    private int serverPort;
+    private String yourName;
+    private String serverPassword;
     private SharedValues sharedValues;
     private BlockingQueue<String> messg;
+    private ServerWriteThread writer;
+    private ServerListenThread listener;
 
 
     public ServerConnector(String serverAddress, int serverPort, String yourName,
-                           PrintWriter printWriter, SharedValues sharedValues) {
+                           String serverPassword, PrintWriter printWriter,
+                           SharedValues sharedValues) {
         System.out.println("Establishing connection. Please wait ...");
         this.messg = new LinkedBlockingQueue<>(1);
+        this.serverAddress = serverAddress;
+        this.serverPort = serverPort;
+        this.serverPassword = serverPassword;
         this.yourName = yourName;
         this.sharedValues = sharedValues;
         this.stdErr = printWriter;
-        try {
-            this.socket = new Socket(serverAddress, serverPort);
-            ServerWriteThread writer = new ServerWriteThread(this.socket,
-                    this.yourName, this.messg);
-            ServerListenThread listener = new ServerListenThread(this.socket,
+
+    }
+
+    public void authenticate()
+            throws LoginFailedException, IOException {
+        Socket socket = new Socket(this.serverAddress, this.serverPort);
+        PrintWriter streamOut = new PrintWriter(socket.getOutputStream(), true);
+        BufferedReader streamIn = new BufferedReader(new InputStreamReader(socket.getInputStream
+                ()));
+        BurpTCMessage loginMessage = new BurpTCMessage(null,
+                MessageType.LOGIN_MESSAGE, "dev", "room", null);
+        loginMessage.setAuthentication(this.getServerPassword());
+        loginMessage.setSendingUser(this.getYourName());
+        streamOut.println(this.sharedValues.getGson().toJson(loginMessage));
+        streamOut.flush();
+        BurpTCMessage loginResponse = this.sharedValues.getGson().fromJson(
+                streamIn.readLine(), BurpTCMessage.class);
+        System.out.println(loginResponse);
+        if (loginResponse.getAuthentication().trim().equals("SUCCESS")) {
+            this.writer = new ServerWriteThread(socket,
+                    this.yourName, this.serverPassword, this.messg);
+            this.listener = new ServerListenThread(socket,
                     sharedValues);
             Thread writerThread = new Thread(writer);
             Thread listenerThread = new Thread(listener);
             listenerThread.start();
             writerThread.start();
-
-            System.out.println("Connected: " + this.socket);
-        }
-        catch (UnknownHostException unknownHostException) {
-            System.out.println("Host unknown: " + unknownHostException.getMessage());
-        }
-        catch (IOException iOException) {
-            System.out.println("Unexpected exception: " + iOException.getMessage());
-        }
-    }
-
-    @Override
-    public void run() {
-        while (this.thread != null) {
-            if (this.messg.isEmpty()) continue;
-            System.out.println("Inside messg count" + this.messg.size());
-            try {
-                this.streamOut.println(this.messg.take());
-                this.streamOut.flush();
-            }
-            catch (Exception exception) {
-                System.out.println(exception.getMessage());
-            }
+            System.out.println("Connected: " + socket);
+        } else {
+            throw new LoginFailedException();
         }
     }
 
@@ -71,82 +68,39 @@ implements Runnable {
         return yourName;
     }
 
-    public Socket getSocket() {
-        return socket;
+    public String getServerPassword() {
+        return this.serverPassword;
     }
 
-    public void sendMessage(String string) {
+    public void sendMessage(BurpTCMessage message) {
         try {
-            System.out.println(string);
-        	this.messg.put(string);
+            message.setAuthentication(this.getServerPassword());
+            message.setSendingUser(this.getYourName());
+            this.messg.put(this.sharedValues.getGson().toJson(message));
             System.out.println("Outside messg count" + this.messg.size());
         } catch(InterruptedException e) {
         	System.out.println(e.getMessage());
         }
     }
 
-    public void handle(String string) {
-        if(string == null) {
-        	this.stop();
-        }
-        else if (!string.equalsIgnoreCase("received")) {
-            HttpRequestResponse httpRequestResponse = this.sharedValues
-                    .getGson().fromJson(string.substring(string.indexOf(':') + 1), HttpRequestResponse.class);
-            this.sharedValues.getCallbacks().addToSiteMap(httpRequestResponse);
-        }
-    }
-
-    public void start() throws IOException {
-        this.console = new BufferedReader(new InputStreamReader(System.in));
-        this.streamOut = new PrintWriter(this.socket
-                .getOutputStream
-                (),true);
-        JsonObject senderSocket = new JsonObject();
-        senderSocket.addProperty("name", this.yourName);
-        senderSocket.addProperty("room", "dev");
-        senderSocket.addProperty("mode", "sender");
-        this.streamOut.println(senderSocket);
-        if (this.thread == null) {
-            this.client = new ChatClientThread(this, this.socket, this.stdErr);
-            this.thread = new Thread(this);
-            this.thread.start();
-        }
-    }
-
-    public void stop() {
-        System.out.println("stopping connection");
-        try {
-            if (this.socket != null) {
-                this.socket.close();
-            }
-            if (this.console != null) {
-                this.console.close();
-            }
-            if (this.streamOut != null) {
-                this.streamOut.close();
-            }
-            this.client.close();
-            this.client.stop();
-            if (this.thread != null) {
-                this.thread.stop();
-                this.thread = null;
-            }
-        }
-        catch (IOException iOException) {
-            System.out.println("Error closing ...");
-        }
-    }
-
     public void leave() {
         System.out.println("leaving server");
-        this.sendMessage("bye");
+        BurpTCMessage leavingMessage = new BurpTCMessage(null,
+                MessageType.QUIT_MESSAGE, "dev", "room", null);
+        this.sendMessage(leavingMessage);
+        this.writer.stop();
+        this.listener.stop();
     }
 
     public void muteMember(String selectedValue) {
-        this.sendMessage("mute:" + selectedValue);
+        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.MUTE_MESSAGE, "dev",
+                selectedValue, null);
+        this.sendMessage(muteMessage);
     }
 
     public void unmuteMember(String selectedValue) {
-        this.sendMessage("unmute:" + selectedValue);
+        BurpTCMessage unmuteMessage = new BurpTCMessage(null, MessageType.UNMUTE_MESSAGE, "dev",
+                selectedValue, null);
+        this.sendMessage(unmuteMessage);
     }
 }

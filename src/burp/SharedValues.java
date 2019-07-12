@@ -3,14 +3,10 @@ package burp;
 import com.google.gson.Gson;
 
 import java.io.PrintWriter;
-import java.net.URL;
 
 public class SharedValues
 implements IProxyListener {
     private IExtensionHelpers extentionHelpers;
-    private URL teammateServerUrl = null;
-    private int teammateServerPort = 0;
-    private int yourPort;
     private ServerConnector serverConnector = null;
     private PrintWriter stdout;
     private PrintWriter stderr;
@@ -39,15 +35,12 @@ implements IProxyListener {
     public void startCommunication() {
         this.callbacks.registerProxyListener(this);
         this.communicating = true;
-        this.serverListModel.setServerConnected(true);
-        this.getServerConnection().sendMessage(
-                "newroommates");
     }
 
     public void stopCommunication() {
         this.serverConnector.leave();
         this.communicating = false;
-        this.serverListModel.setServerConnected(false);
+        this.serverListModel.removeAllElements();
         this.callbacks.removeProxyListener(this);
     }
 
@@ -57,18 +50,6 @@ implements IProxyListener {
 
     public void setServerConnection(ServerConnector serverConnector) {
         this.serverConnector = serverConnector;
-    }
-
-    public int getYourPort() {
-        return this.yourPort;
-    }
-
-    public void setYourPort(int n) {
-        this.yourPort = n;
-    }
-
-    public PrintWriter getStdout() {
-        return this.stdout;
     }
 
     public PrintWriter getStderr() {
@@ -83,27 +64,13 @@ implements IProxyListener {
         return this.callbacks;
     }
 
-    public URL getTeammateServerUrl() {
-        return this.teammateServerUrl;
-    }
-
-    public void setTeammateServerUrl(URL uRL) {
-        this.teammateServerUrl = uRL;
-    }
-
-    public int getTeammateServerPort() {
-        return this.teammateServerPort;
-    }
-
-    public void setTeammateServerPort(int n) {
-        this.teammateServerPort = n;
-    }
-
     public void processProxyMessage(boolean isResponse,
                                     IInterceptedProxyMessage iInterceptedProxyMessage) {
         if (!isResponse && this.communicating) {
 	        HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
-	        this.getServerConnection().sendMessage(this.gson.toJson(httpRequestResponse));
+            BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE,
+                    "dev", "room", null);
+            this.getServerConnection().sendMessage(burpMessage);
         }
     }
 

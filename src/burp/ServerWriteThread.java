@@ -11,32 +11,36 @@ public class ServerWriteThread  implements Runnable{
 
     private BlockingQueue<String> messageQueue;
     private PrintWriter streamOut = null;
+    private boolean exit;
 
     public ServerWriteThread(Socket serverSocket, String username,
-                             BlockingQueue<String> messageQueue){
+                             String serverPassword, BlockingQueue<String> messageQueue) {
+        this.exit = false;
         try {
             this.messageQueue = messageQueue;
-            this.streamOut = new PrintWriter(serverSocket
-                    .getOutputStream
-                            (),true);
-            this.initConnection(username);
+            this.streamOut = new PrintWriter(serverSocket.getOutputStream(), true);
+            this.initConnection(username, serverPassword);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void initConnection(String username){
+    private void initConnection(String username, String serverPassword) {
         JsonObject senderSocket = new JsonObject();
         senderSocket.addProperty("name", username);
         senderSocket.addProperty("room", "dev");
-        senderSocket.addProperty("mode", "sender");
+        senderSocket.addProperty("password", serverPassword);
         this.streamOut.println(senderSocket);
         this.streamOut.flush();
     }
 
+    public void stop() {
+        exit = true;
+    }
+
     @Override
     public void run() {
-        while(true){
+        while (!exit) {
             if (!this.messageQueue.isEmpty()) {
                 try {
                     String message = this.messageQueue.take();

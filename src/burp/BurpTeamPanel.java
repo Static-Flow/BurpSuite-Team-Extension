@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 
 public class BurpTeamPanel
 extends JPanel {
@@ -25,6 +26,8 @@ extends JPanel {
     private JTextField theirPort;
     private JLabel TheirListenAddress;
     private JTextField theirAddress;
+    private JLabel serverPasswordLabel;
+    private JTextField serverPassword;
     private JPanel infoPanel;
     private JPanel connectionPanel;
     private JPanel actionPanel;
@@ -41,6 +44,7 @@ extends JPanel {
     private void StartButtonActionPerformed(ActionEvent actionEvent) {
         if (this.sharedValues.isCommunicating()) {
             this.StartButton.setText("Connect");
+            this.sharedValues.getServerListModel().removeAllElements();
             this.sharedValues.stopCommunication();
             try {
                 this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
@@ -48,17 +52,24 @@ extends JPanel {
                 e.printStackTrace();
             }
         } else {
-            this.StartButton.setText("Disconnect");
-            this.sharedValues.setServerConnection(new ServerConnector(this.theirAddress.getText(),
-                    Integer.parseInt(this.theirPort.getText()), this.yourName.getText(),
-                    this.sharedValues.getStderr(), this.sharedValues));
             try {
-                if (this.sharedValues.getServerConnection().getSocket().isConnected()) {
+                this.sharedValues.setServerConnection(new ServerConnector(this.theirAddress.getText(),
+                        Integer.parseInt(this.theirPort.getText()), this.yourName.getText(),
+                        this.serverPassword.getText(), this.sharedValues.getStderr(), this.sharedValues));
+                this.sharedValues.getServerConnection().authenticate();
+                this.StartButton.setText("Disconnect");
+                try {
                     this.sharedValues.startCommunication();
-                    this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Connected to server\n", null);
+                    this.statusText.getDocument().insertString(
+                            this.statusText.getDocument().getLength(),
+                            "Connected to server\n", null);
+                } catch (BadLocationException e) {
+                    System.out.println("error" + e);
                 }
-            } catch (BadLocationException e) {
-                System.out.println("error" + e);
+            } catch (LoginFailedException e) {
+                System.out.println("bad Login" + e);
+            } catch (IOException e) {
+                System.out.println("bad Connection" + e);
             }
         }
     }
@@ -89,6 +100,7 @@ extends JPanel {
                 "show up in your site map as well.</html>\n");
         
         panel = new JPanel();
+        panel.setBorder(BorderFactory.createLineBorder(Color.white));
         GridBagConstraints gbc_panel = new GridBagConstraints();
         gbc_panel.insets = new Insets(0, 0, 5, 0);
         gbc_panel.fill = GridBagConstraints.BOTH;
@@ -123,6 +135,11 @@ extends JPanel {
         this.theirListenPort.setText("Server Port:");
         this.theirPort = new JTextField();
         connectionPanel.add(theirPort);
+        this.serverPasswordLabel = new JLabel();
+        this.serverPasswordLabel.setText("Server Password:");
+        connectionPanel.add(this.serverPasswordLabel);
+        this.serverPassword = new JTextField();
+        connectionPanel.add(this.serverPassword);
         this.StartButton = new JButton();
         connectionPanel.add(StartButton);
         this.StartButton.setText("Connect");
@@ -133,6 +150,7 @@ extends JPanel {
         this.StartButton.addActionListener(this::StartButtonActionPerformed);
         
         actionPanel = new JPanel();
+        actionPanel.setBorder(BorderFactory.createLineBorder(Color.white));
         GridBagConstraints gbc_actionPanel = new GridBagConstraints();
         gbc_actionPanel.insets = new Insets(0, 0, 5, 0);
         gbc_actionPanel.fill = GridBagConstraints.BOTH;
@@ -162,7 +180,10 @@ extends JPanel {
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isRightMouseButton(e)) {
                     serverList.setSelectedIndex(serverList.locationToIndex(e.getPoint()));
-                    menu.show(serverList, e.getPoint().x, e.getPoint().y);
+                    if (!sharedValues.getServerConnection().getYourName()
+                            .equals(serverList.getSelectedValue())) {
+                        menu.show(serverList, e.getPoint().x, e.getPoint().y);
+                    }
                 }
             }
         });

@@ -26,30 +26,20 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             httpRequestResponse.setRequest(requestResponse.getRequest());
             httpRequestResponse.setResponse(requestResponse.getResponse());
             httpRequestResponse.setHttpService(requestResponse.getHttpService());
-            if (sendingContext == CONTEXT_SEND_TO_INDIVIDUAL) {
-                sharedValues.getServerConnection().sendMessage(
-                        "Intruder:To:" + sendingContextArgument + ":" +
-                                sharedValues.getGson()
-                                        .toJson(httpRequestResponse));
-            } else {
-                sharedValues.getServerConnection().sendMessage(
-                        "Intruder:" + sharedValues.getGson()
-                                .toJson(httpRequestResponse));
-            }
+            BurpTCMessage intruderMessage = new BurpTCMessage(
+                    httpRequestResponse, MessageType.INTRUDER_MESSAGE, "dev",
+                    sendingContext == CONTEXT_SEND_TO_INDIVIDUAL ? sendingContextArgument : "room",
+                    null);
+            sharedValues.getServerConnection().sendMessage(intruderMessage);
         } else if (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST) {
             IHttpRequestResponse requestResponse =
                     invocation.getSelectedMessages()[0];
             createHttpRequestResponse(httpRequestResponse, requestResponse);
-            if (sendingContext == CONTEXT_SEND_TO_INDIVIDUAL) {
-                sharedValues.getServerConnection().sendMessage(
-                        "Repeater:To:" + sendingContextArgument + ":" +
-                                sharedValues.getGson()
-                                        .toJson(httpRequestResponse));
-            } else {
-                sharedValues.getServerConnection().sendMessage(
-                        "Repeater:" + sharedValues.getGson()
-                                .toJson(httpRequestResponse));
-            }
+            BurpTCMessage intruderMessage = new BurpTCMessage(
+                    httpRequestResponse, MessageType.REPEATER_MESSAGE, "dev",
+                    sendingContext == CONTEXT_SEND_TO_INDIVIDUAL ? sendingContextArgument : "room",
+                    null);
+            sharedValues.getServerConnection().sendMessage(intruderMessage);
         } else {
             for (IHttpRequestResponse reqResp : invocation.getSelectedMessages()) {
                 IRequestInfo req =
@@ -69,15 +59,11 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                     httpRequestResponse.setRequest(reqRep.getRequest());
                     httpRequestResponse.setResponse(reqRep.getResponse());
                     httpRequestResponse.setHttpService(reqRep.getHttpService());
-                    if (sendingContext == CONTEXT_SEND_TO_GROUP) {
-                        sharedValues.getServerConnection().sendMessage(
-                                sharedValues.getGson().toJson(httpRequestResponse));
-                    } else {
-                        sharedValues.getServerConnection().sendMessage(
-                                "To:" + sendingContextArgument + ":" +
-                                        sharedValues.getGson()
-                                                .toJson(httpRequestResponse));
-                    }
+                    BurpTCMessage intruderMessage = new BurpTCMessage(
+                            httpRequestResponse, MessageType.BURP_MESSAGE, "dev",
+                            sendingContext == CONTEXT_SEND_TO_GROUP ? "room" : sendingContextArgument,
+                            null);
+                    sharedValues.getServerConnection().sendMessage(intruderMessage);
                 }
             }
         }
@@ -99,11 +85,13 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         ArrayList<String> teammembers =
                 this.sharedValues.getServerListModel().getServersMembers();
         for (String teamMember : teammembers) {
-            JMenuItem teammate1MenuItem = new JMenuItem(teamMember);
-            teammate1MenuItem.addActionListener(e ->
-                    sendSelectedRequests(invocation,
-                            CONTEXT_SEND_TO_INDIVIDUAL, teamMember));
-            toTeammateMenu.add(teammate1MenuItem);
+            if (!teamMember.equals(sharedValues.getServerConnection().getYourName())) {
+                JMenuItem teammate1MenuItem = new JMenuItem(teamMember);
+                teammate1MenuItem.addActionListener(e ->
+                        sendSelectedRequests(invocation,
+                                CONTEXT_SEND_TO_INDIVIDUAL, teamMember));
+                toTeammateMenu.add(teammate1MenuItem);
+            }
         }
         menu.add(toTeammateMenu);
         ArrayList menuList = new ArrayList();

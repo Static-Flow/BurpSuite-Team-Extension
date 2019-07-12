@@ -9,8 +9,10 @@ public class ServerListenThread implements Runnable {
 
     private BufferedReader streamIn;
     private SharedValues sharedValues;
+    private boolean exit;
 
     public ServerListenThread(Socket socket, SharedValues sharedValues){
+        this.exit = false;
         try {
             this.streamIn = new BufferedReader(new InputStreamReader(socket.getInputStream
                     ()));
@@ -21,59 +23,59 @@ public class ServerListenThread implements Runnable {
         }
     }
 
+    public void stop() {
+        exit = true;
+    }
+
     @Override
     public void run() {
         do {
             try {
+                if (exit) {
+                    break;
+                }
                 String message = this.streamIn.readLine();
-                System.out.println(message);
-                if(message.startsWith("roommates")){
-                    String currentUsers = message.split(":")[1];
-                    for(String user : currentUsers.split(",")) {
-                        System.out.println(user+":"+this.sharedValues.getServerConnection().getYourName().equalsIgnoreCase(user));
-                        if(!this.sharedValues.getServerConnection().getYourName().equalsIgnoreCase(user)) {
-                            System.out.println("new User");
-                            this.sharedValues.getServerListModel().add(user);
-                        }
-                    }
-                } else if(message.startsWith("leavingroommate")){
-                    String leavingUser = message.split(":")[1];
-                    this.sharedValues.getServerListModel().remove(leavingUser);
-                } else if (message.startsWith("Repeater")) {
-                    String repeaterPayload =
-                            message.substring(message.indexOf(':') + 1);
-                    HttpRequestResponse httpRequestResponse = this.sharedValues
-                            .getGson().fromJson(repeaterPayload,
-                                    HttpRequestResponse.class);
-                    this.sharedValues.getCallbacks().sendToRepeater(
-                            httpRequestResponse.getHttpService().getHost(),
-                            httpRequestResponse.getHttpService().getPort(),
-                            httpRequestResponse.getHttpService().getProtocol()
+                if (message == null) {
+                    System.out.println("Stream is broke");
+                    break;
+                }
+                BurpTCMessage msg = this.sharedValues.getGson().fromJson(message, BurpTCMessage.class);
+                System.out.println("Got message  " + msg);
+                switch (msg.getMessageType()) {
+                    case BURP_MESSAGE:
+                        this.sharedValues.getCallbacks().addToSiteMap(msg.getRequestResponse());
+                        break;
+                    case REPEATER_MESSAGE:
+                        this.sharedValues.getCallbacks().sendToRepeater(
+                                msg.getRequestResponse().getHttpService().getHost(),
+                                msg.getRequestResponse().getHttpService().getPort(),
+                                msg.getRequestResponse().getHttpService().getProtocol()
                                     .equalsIgnoreCase("https"),
-                            httpRequestResponse.getRequest(),
+                                msg.getRequestResponse().getRequest(),
                             "BurpTC Payload");
-                } else if (message.startsWith("Intruder")) {
-                    String intruderPayload =
-                            message.substring(message.indexOf(':') + 1);
-                    HttpRequestResponse httpRequestResponse = this.sharedValues
-                            .getGson().fromJson(intruderPayload,
-                                    HttpRequestResponse.class);
-                    this.sharedValues.getCallbacks().sendToIntruder(
-                            httpRequestResponse.getHttpService().getHost(),
-                            httpRequestResponse.getHttpService().getPort(),
-                            httpRequestResponse.getHttpService().getProtocol()
+                        break;
+                    case INTRUDER_MESSAGE:
+                        this.sharedValues.getCallbacks().sendToIntruder(
+                                msg.getRequestResponse().getHttpService().getHost(),
+                                msg.getRequestResponse().getHttpService().getPort(),
+                                msg.getRequestResponse().getHttpService().getProtocol()
                                     .equalsIgnoreCase("https"),
-                            httpRequestResponse.getRequest());
-                } else {
-                    HttpRequestResponse httpRequestResponse = this.sharedValues
-                            .getGson().fromJson(message.substring(message.indexOf(':') + 1), HttpRequestResponse.class);
-                    this.sharedValues.getCallbacks().addToSiteMap(httpRequestResponse);
+                                msg.getRequestResponse().getRequest());
+                        break;
+                    case NEW_MEMBER_MESSAGE:
+                        this.sharedValues.getServerListModel().removeAllElements();
+                        for (String member : msg.getData().split(",")) {
+                            this.sharedValues.getServerListModel().addElement(member);
+                        }
+                        break;
+                    default:
+                        System.out.println("Bad msg type");
                 }
             }
             catch (IOException iOException) {
                 System.out.println("Listening error: " + iOException.getMessage());
                 break;
             }
-        } while (true);
+        } while (!exit);
     }
 }
