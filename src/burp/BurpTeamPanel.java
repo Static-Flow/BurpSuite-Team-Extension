@@ -43,34 +43,64 @@ extends JPanel {
 
     private void StartButtonActionPerformed(ActionEvent actionEvent) {
         if (this.sharedValues.isCommunicating()) {
-            this.StartButton.setText("Connect");
-            this.sharedValues.getServerListModel().removeAllElements();
             this.sharedValues.stopCommunication();
-            try {
-                this.statusText.getDocument().insertString(this.statusText.getDocument().getLength(), "Disconnected from server\n", null);
-            } catch (BadLocationException e) {
-                e.printStackTrace();
-            }
         } else {
-            try {
-                this.sharedValues.setServerConnection(new ServerConnector(this.theirAddress.getText(),
-                        Integer.parseInt(this.theirPort.getText()), this.yourName.getText(),
-                        this.serverPassword.getText(), this.sharedValues.getStderr(), this.sharedValues));
-                this.sharedValues.getServerConnection().authenticate();
-                this.StartButton.setText("Disconnect");
-                try {
-                    this.sharedValues.startCommunication();
-                    this.statusText.getDocument().insertString(
-                            this.statusText.getDocument().getLength(),
-                            "Connected to server\n", null);
-                } catch (BadLocationException e) {
-                    System.out.println("error" + e);
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                public Boolean doInBackground() {
+                    sharedValues.setServerConnection(new ServerConnector(theirAddress.getText(),
+                            Integer.parseInt(theirPort.getText()),
+                            yourName.getText(), serverPassword.getText(),
+                            sharedValues.getStderr(), sharedValues));
+                    try {
+                        try {
+                            sharedValues.getServerConnection().authenticate();
+
+                            StartButton.setText("Disconnect");
+                            sharedValues.startCommunication();
+                            statusText.getDocument().insertString(
+                                    statusText.getDocument().getLength(),
+                                    "Connected to server\n", null);
+                        } catch (LoginFailedException e) {
+                            statusText.getDocument().insertString(
+                                    statusText.getDocument().getLength(),
+                                    "Incorrect Password\n", null);
+                            return Boolean.TRUE;
+                        } catch (IOException e) {
+                            statusText.getDocument().insertString(
+                                    statusText.getDocument().getLength(),
+                                    "Server connection timeout\n", null);
+                            return Boolean.TRUE;
+                        }
+                    } catch (BadLocationException e) {
+                        System.out.println("error" + e);
+                    }
+                    try {
+                        sharedValues.getServerConnection().getListener().join();
+                    } catch (InterruptedException e) {
+                        return Boolean.TRUE;
+                    }
+                    return Boolean.TRUE;
                 }
-            } catch (LoginFailedException e) {
-                System.out.println("bad Login" + e);
-            } catch (IOException e) {
-                System.out.println("bad Connection" + e);
-            }
+
+                @Override
+                public void done() {
+                    StartButton.setText("Connect");
+                    try {
+                        if (sharedValues.isServerDead()) {
+                            statusText.getDocument().insertString(
+                                    statusText.getDocument().getLength(),
+                                    "Server has died\n", null);
+                        } else {
+                            statusText.getDocument().insertString(
+                                    statusText.getDocument().getLength(),
+                                    "Disconnected from server\n", null);
+                        }
+                    } catch (BadLocationException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }.execute();
         }
     }
 

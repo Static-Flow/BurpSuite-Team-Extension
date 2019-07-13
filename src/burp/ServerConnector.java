@@ -18,6 +18,7 @@ public class ServerConnector {
     private BlockingQueue<String> messg;
     private ServerWriteThread writer;
     private ServerListenThread listener;
+    private Thread listenerThread;
 
 
     public ServerConnector(String serverAddress, int serverPort, String yourName,
@@ -55,7 +56,7 @@ public class ServerConnector {
             this.listener = new ServerListenThread(socket,
                     sharedValues);
             Thread writerThread = new Thread(writer);
-            Thread listenerThread = new Thread(listener);
+            this.listenerThread = new Thread(listener);
             listenerThread.start();
             writerThread.start();
             System.out.println("Connected: " + socket);
@@ -88,6 +89,14 @@ public class ServerConnector {
         BurpTCMessage leavingMessage = new BurpTCMessage(null,
                 MessageType.QUIT_MESSAGE, "dev", "room", null);
         this.sendMessage(leavingMessage);
+        cutTheHardLine();
+    }
+
+    public Thread getListener() {
+        return this.listenerThread;
+    }
+
+    public void cutTheHardLine() {
         this.writer.stop();
         this.listener.stop();
     }

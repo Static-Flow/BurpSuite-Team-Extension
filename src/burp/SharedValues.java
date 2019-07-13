@@ -14,6 +14,7 @@ implements IProxyListener {
     private Gson gson;
     private ServerListModel serverListModel;
     private boolean communicating;
+    private boolean serverDied;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
@@ -22,6 +23,7 @@ implements IProxyListener {
             this.stderr = new PrintWriter(iBurpExtenderCallbacks.getStderr(), true);
         }
         this.communicating = false;
+        this.serverDied = false;
         this.extentionHelpers = iBurpExtenderCallbacks.getHelpers();
         this.callbacks = iBurpExtenderCallbacks;
         this.gson = new Gson();
@@ -34,6 +36,7 @@ implements IProxyListener {
 
     public void startCommunication() {
         this.callbacks.registerProxyListener(this);
+        this.serverDied = false;
         this.communicating = true;
     }
 
@@ -46,6 +49,18 @@ implements IProxyListener {
 
     public ServerConnector getServerConnection() {
         return this.serverConnector;
+    }
+
+    public boolean isServerDead() {
+        return this.serverDied;
+    }
+
+    public void serverDead() {
+        this.serverDied = true;
+        this.serverConnector.cutTheHardLine();
+        this.communicating = false;
+        this.serverListModel.removeAllElements();
+        this.callbacks.removeProxyListener(this);
     }
 
     public void setServerConnection(ServerConnector serverConnector) {

@@ -74,6 +74,7 @@ public class ServerListenThread implements Runnable {
             }
             catch (IOException iOException) {
                 System.out.println("Listening error: " + iOException.getMessage());
+                this.sharedValues.serverDead();
                 break;
             }
         } while (!exit);
