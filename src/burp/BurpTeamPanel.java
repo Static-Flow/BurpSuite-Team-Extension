@@ -35,6 +35,8 @@ extends JPanel {
     private JPanel panel;
     private JTextPane statusText;
     private JButton PauseButton;
+    private JButton newRoom;
+    private JButton leaveRoom;
 
     public BurpTeamPanel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
@@ -54,9 +56,10 @@ extends JPanel {
                             sharedValues.getStderr(), sharedValues));
                     try {
                         try {
-                            sharedValues.getServerConnection().authenticate();
-
+                            sharedValues.getServerConnection().authenticate("server");
+                            sharedValues.getServerConnection().getServerRooms();
                             StartButton.setText("Disconnect");
+                            newRoom.setVisible(true);
                             sharedValues.startCommunication();
                             statusText.getDocument().insertString(
                                     statusText.getDocument().getLength(),
@@ -86,16 +89,11 @@ extends JPanel {
                 @Override
                 public void done() {
                     StartButton.setText("Connect");
+                    newRoom.setVisible(false);
                     try {
-                        if (sharedValues.isServerDead()) {
-                            statusText.getDocument().insertString(
-                                    statusText.getDocument().getLength(),
-                                    "Server has died\n", null);
-                        } else {
-                            statusText.getDocument().insertString(
-                                    statusText.getDocument().getLength(),
-                                    "Disconnected from server\n", null);
-                        }
+                        statusText.getDocument().insertString(
+                                statusText.getDocument().getLength(),
+                                "Disconnected from server\n", null);
                     } catch (BadLocationException e) {
                         e.printStackTrace();
                     }
@@ -140,7 +138,9 @@ extends JPanel {
         panel.setLayout(new BorderLayout(0, 0));
         
         statusText = new JTextPane();
-        panel.add(statusText);
+        statusText.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(statusText);
+        panel.add(scrollPane);
         
         connectionPanel = new JPanel();
         GridBagConstraints gbc_connectionPanel = new GridBagConstraints();
@@ -174,10 +174,19 @@ extends JPanel {
         connectionPanel.add(StartButton);
         this.StartButton.setText("Connect");
         this.PauseButton = new JButton();
+        this.PauseButton.setVisible(false);
         connectionPanel.add(PauseButton);
         this.PauseButton.setText("Pause");
         this.PauseButton.addActionListener(this::PauseButtonActionPerformed);
         this.StartButton.addActionListener(this::StartButtonActionPerformed);
+        newRoom = new JButton("New Room");
+        newRoom.addActionListener(this::AddRoomButtonActionPerformed);
+        newRoom.setVisible(false);
+        connectionPanel.add(newRoom);
+        leaveRoom = new JButton("Leave Room");
+        leaveRoom.setVisible(false);
+        leaveRoom.addActionListener(this::LeaveRoomButtonActionPerformed);
+        connectionPanel.add(leaveRoom);
         
         actionPanel = new JPanel();
         actionPanel.setBorder(BorderFactory.createLineBorder(Color.white));
@@ -189,7 +198,18 @@ extends JPanel {
         add(actionPanel, gbc_actionPanel);
         actionPanel.setLayout(new BorderLayout(2, 2));
 
-        JPopupMenu menu = new JPopupMenu();
+        JPopupMenu roomMenu = new JPopupMenu();
+        JMenuItem joinRoom = new JMenuItem("Join");
+        joinRoom.addActionListener(e1 -> {
+            this.sharedValues.getServerConnection().joinRoom((String) serverList.getSelectedValue());
+            this.newRoom.setVisible(false);
+            this.leaveRoom.setVisible(true);
+            this.StartButton.setVisible(false);
+            this.PauseButton.setVisible(true);
+        });
+        roomMenu.add(joinRoom);
+
+        JPopupMenu clientMenu = new JPopupMenu();
         JMenuItem unmuteClient = new JMenuItem("Unmute");
         JMenuItem muteClient = new JMenuItem("Mute");
         muteClient.addActionListener(e1 -> {
@@ -203,8 +223,8 @@ extends JPanel {
             sharedValues.getServerConnection().unmuteMember((String) serverList.getSelectedValue());
         });
         unmuteClient.setVisible(false);
-        menu.add(muteClient);
-        menu.add(unmuteClient);
+        clientMenu.add(muteClient);
+        clientMenu.add(unmuteClient);
         serverList = new JList();
         serverList.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
@@ -212,7 +232,11 @@ extends JPanel {
                     serverList.setSelectedIndex(serverList.locationToIndex(e.getPoint()));
                     if (!sharedValues.getServerConnection().getYourName()
                             .equals(serverList.getSelectedValue())) {
-                        menu.show(serverList, e.getPoint().x, e.getPoint().y);
+                        if (sharedValues.getServerConnection().getCurrentRoom().equals("server")) {
+                            roomMenu.show(serverList, e.getPoint().x, e.getPoint().y);
+                        } else {
+                            clientMenu.show(serverList, e.getPoint().x, e.getPoint().y);
+                        }
                     }
                 }
             }
@@ -220,6 +244,30 @@ extends JPanel {
         serverList.setModel(this.sharedValues.getServerListModel());
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         actionPanel.add(serverList);
+    }
+
+    private void LeaveRoomButtonActionPerformed(ActionEvent actionEvent) {
+        this.newRoom.setVisible(true);
+        this.leaveRoom.setVisible(false);
+        this.StartButton.setVisible(true);
+        this.PauseButton.setVisible(false);
+        this.sharedValues.getServerConnection().leaveRoom();
+    }
+
+    private void AddRoomButtonActionPerformed(ActionEvent actionEvent) {
+        JDialog roomOptions = new JDialog();
+        roomOptions.setTitle("Room Options");
+        JTextField roomName = new JTextField();
+        roomOptions.add(roomName);
+        String roomNameValue = JOptionPane.showInputDialog(roomOptions, "Please enter a room name");
+        System.out.println(roomNameValue);
+        if ((roomNameValue != null) && (roomNameValue.length() > 0)) {
+            this.sharedValues.getServerConnection().createRoom(roomNameValue);
+            this.newRoom.setVisible(false);
+            this.leaveRoom.setVisible(true);
+            this.StartButton.setVisible(false);
+            this.PauseButton.setVisible(true);
+        }
     }
 
     private void PauseButtonActionPerformed(ActionEvent actionEvent) {

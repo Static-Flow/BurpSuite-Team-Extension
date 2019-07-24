@@ -6,8 +6,6 @@ class HttpService implements IHttpService
     private int port;
     private String protocol;
 
-    public HttpService(){super();}
-
     public HttpService(IHttpService copy){
         this.host = copy.getHost();
         this.port = copy.getPort();

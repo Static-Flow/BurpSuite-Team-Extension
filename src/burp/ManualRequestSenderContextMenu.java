@@ -27,7 +27,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             httpRequestResponse.setResponse(requestResponse.getResponse());
             httpRequestResponse.setHttpService(requestResponse.getHttpService());
             BurpTCMessage intruderMessage = new BurpTCMessage(
-                    httpRequestResponse, MessageType.INTRUDER_MESSAGE, "dev",
+                    httpRequestResponse, MessageType.INTRUDER_MESSAGE, sharedValues.getServerConnection().getCurrentRoom(),
                     sendingContext == CONTEXT_SEND_TO_INDIVIDUAL ? sendingContextArgument : "room",
                     null);
             sharedValues.getServerConnection().sendMessage(intruderMessage);
@@ -36,7 +36,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                     invocation.getSelectedMessages()[0];
             createHttpRequestResponse(httpRequestResponse, requestResponse);
             BurpTCMessage intruderMessage = new BurpTCMessage(
-                    httpRequestResponse, MessageType.REPEATER_MESSAGE, "dev",
+                    httpRequestResponse, MessageType.REPEATER_MESSAGE, sharedValues.getServerConnection().getCurrentRoom(),
                     sendingContext == CONTEXT_SEND_TO_INDIVIDUAL ? sendingContextArgument : "room",
                     null);
             sharedValues.getServerConnection().sendMessage(intruderMessage);
@@ -60,7 +60,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                     httpRequestResponse.setResponse(reqRep.getResponse());
                     httpRequestResponse.setHttpService(reqRep.getHttpService());
                     BurpTCMessage intruderMessage = new BurpTCMessage(
-                            httpRequestResponse, MessageType.BURP_MESSAGE, "dev",
+                            httpRequestResponse, MessageType.BURP_MESSAGE, sharedValues.getServerConnection().getCurrentRoom(),
                             sendingContext == CONTEXT_SEND_TO_GROUP ? "room" : sendingContextArgument,
                             null);
                     sharedValues.getServerConnection().sendMessage(intruderMessage);

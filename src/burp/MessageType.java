@@ -8,5 +8,9 @@ public enum MessageType {
     LOGIN_MESSAGE, //For sending a login message
     MUTE_MESSAGE, //For sending a mute message
     UNMUTE_MESSAGE, //For sending a unmute message
-    NEW_MEMBER_MESSAGE //For getting new members
+    NEW_MEMBER_MESSAGE, //For getting new members
+    GET_ROOMS_MESSAGE, //For getting list of server rooms
+    ADD_ROOM_MESSAGE, //For adding a new room
+    JOIN_ROOM_MESSAGE, //For joining a room
+    LEAVE_ROOM_MESSAGE, //For leaving a room
 }

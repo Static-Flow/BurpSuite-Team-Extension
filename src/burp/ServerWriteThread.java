@@ -19,7 +19,7 @@ public class ServerWriteThread  implements Runnable{
         try {
             this.messageQueue = messageQueue;
             this.streamOut = new PrintWriter(serverSocket.getOutputStream(), true);
-            this.initConnection(username, serverPassword);
+            //this.initConnection(username, serverPassword);
         } catch (IOException e) {
             e.printStackTrace();
         }

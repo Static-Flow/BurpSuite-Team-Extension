@@ -37,9 +37,11 @@ public class ServerListenThread implements Runnable {
                 String message = this.streamIn.readLine();
                 if (message == null) {
                     System.out.println("Stream is broke");
+                    this.sharedValues.doneListening();
                     break;
                 }
-                BurpTCMessage msg = this.sharedValues.getGson().fromJson(message, BurpTCMessage.class);
+                String decryptedMessage = this.sharedValues.getAESCrypter().decrypt(message);
+                BurpTCMessage msg = this.sharedValues.getGson().fromJson(decryptedMessage, BurpTCMessage.class);
                 System.out.println("Got message  " + msg);
                 switch (msg.getMessageType()) {
                     case BURP_MESSAGE:
@@ -63,9 +65,20 @@ public class ServerListenThread implements Runnable {
                                 msg.getRequestResponse().getRequest());
                         break;
                     case NEW_MEMBER_MESSAGE:
+                        if (!this.sharedValues.getServerConnection().getCurrentRoom().equals("server")) {
+                            this.sharedValues.getServerListModel().removeAllElements();
+                            for (String member : msg.getData().split(",")) {
+                                this.sharedValues.getServerListModel().addElement(member);
+                            }
+                        }
+                    case GET_ROOMS_MESSAGE:
                         this.sharedValues.getServerListModel().removeAllElements();
-                        for (String member : msg.getData().split(",")) {
-                            this.sharedValues.getServerListModel().addElement(member);
+                        if (msg.getData().length() == 0) {
+                            this.sharedValues.getServerListModel().addElement("No rooms currently");
+                        } else {
+                            for (String member : msg.getData().split(",")) {
+                                this.sharedValues.getServerListModel().addElement(member);
+                            }
                         }
                         break;
                     default:
@@ -74,7 +87,7 @@ public class ServerListenThread implements Runnable {
             }
             catch (IOException iOException) {
                 System.out.println("Listening error: " + iOException.getMessage());
-                this.sharedValues.serverDead();
+                this.sharedValues.doneListening();
                 break;
             }
         } while (!exit);

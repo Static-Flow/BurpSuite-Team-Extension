@@ -15,6 +15,7 @@ implements IProxyListener {
     private ServerListModel serverListModel;
     private boolean communicating;
     private boolean serverDied;
+    private AESEncryptDecrypt AESCrypter;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
@@ -28,6 +29,14 @@ implements IProxyListener {
         this.callbacks = iBurpExtenderCallbacks;
         this.gson = new Gson();
         this.serverListModel = new ServerListModel();
+    }
+
+    public AESEncryptDecrypt getAESCrypter() {
+        return this.AESCrypter;
+    }
+
+    public void initAESCrypterWithKey(String key) {
+        this.AESCrypter = new AESEncryptDecrypt(key);
     }
 
     public ServerListModel getServerListModel() {
@@ -55,7 +64,7 @@ implements IProxyListener {
         return this.serverDied;
     }
 
-    public void serverDead() {
+    public void doneListening() {
         this.serverDied = true;
         this.serverConnector.cutTheHardLine();
         this.communicating = false;
@@ -84,7 +93,7 @@ implements IProxyListener {
         if (!isResponse && this.communicating) {
 	        HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
             BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE,
-                    "dev", "room", null);
+                    this.getServerConnection().getCurrentRoom(), "room", null);
             this.getServerConnection().sendMessage(burpMessage);
         }
     }
