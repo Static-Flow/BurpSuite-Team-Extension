@@ -10,7 +10,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 class ServerConnector {
     private static final String ME = "me";
-    private static final String SERVER = "server";
+    public static final String ALL = "all";
+    public final String SERVER = "server";
     private String serverAddress;
     private int serverPort;
     private String yourName;
@@ -165,5 +166,17 @@ class ServerConnector {
     void getRoomScope() {
         BurpTCMessage syncScopeMessage = new BurpTCMessage(null, MessageType.SYNC_SCOPE_MESSAGE, this.currentRoom, ME, null);
         this.sendMessage(syncScopeMessage);
+    }
+
+    void muteAllMembers() {
+        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.MUTE_MESSAGE, this.currentRoom,
+                ALL, null);
+        this.sendMessage(muteMessage);
+    }
+
+    void unmuteAllMembers() {
+        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.UNMUTE_MESSAGE, this.currentRoom,
+                ALL, null);
+        this.sendMessage(muteMessage);
     }
 }

@@ -107,18 +107,21 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
 
     @Override
     public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
-        if (Arrays.asList(IContextMenuInvocation.CONTEXT_PROXY_HISTORY,
-                IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE,
-                IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE).contains(invocation.getInvocationContext())) {
-            return createMenu("Forward Request", invocation);
-        } else if (Objects.equals(IContextMenuInvocation.CONTEXT_INTRUDER_PAYLOAD_POSITIONS, invocation.getInvocationContext())) {
-            return createMenu("Share Intruder Payload", invocation);
+        if (!sharedValues.getServerConnection().getCurrentRoom().equals(sharedValues.getServerConnection().SERVER)) {
+            if (Arrays.asList(IContextMenuInvocation.CONTEXT_PROXY_HISTORY,
+                    IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE,
+                    IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE).contains(invocation.getInvocationContext())) {
+                return createMenu("Share Request", invocation);
+            } else if (Objects.equals(IContextMenuInvocation.CONTEXT_INTRUDER_PAYLOAD_POSITIONS, invocation.getInvocationContext())) {
+                return createMenu("Share Intruder Payload", invocation);
 
-        } else if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
-            return createMenu("Share Repeater Payload", invocation);
+            } else if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
+                return createMenu("Share Repeater Payload", invocation);
 
-        } else {
-            return null;
+            } else {
+                return null;
+            }
         }
+        return null;
     }
 }

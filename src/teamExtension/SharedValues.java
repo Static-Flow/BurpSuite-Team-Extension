@@ -46,6 +46,9 @@ implements IProxyListener {
     }
 
     void stopCommunication() {
+        if (!this.getServerConnection().getCurrentRoom().equals(this.getServerConnection().SERVER)) {
+            this.serverConnector.leaveRoom();
+        }
         this.serverConnector.leave();
         this.communicating = false;
         this.serverListModel.removeAllElements();

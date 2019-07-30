@@ -10,6 +10,7 @@ import java.io.IOException;
 public class BurpTeamPanel
 extends JPanel {
 	private static final long serialVersionUID = 1L;
+    private boolean allMuted;
 	private SharedValues sharedValues;
     private JButton startButton;
     private JTextField yourName;
@@ -23,10 +24,12 @@ extends JPanel {
     private JButton leaveRoom;
     private JButton setScopeButton;
     private JButton getScopeButton;
+    private JButton muteAllButton;
 
     public BurpTeamPanel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
         this.initComponents();
+        this.allMuted = false;
     }
 
     private void StartButtonActionPerformed() {
@@ -74,11 +77,13 @@ extends JPanel {
 
                 @Override
                 public void done() {
+                    sharedValues.getServerListModel().removeAllElements();
+                    allMuted = false;
                     startButton.setText("Connect");
                     newRoom.setEnabled(false);
+                    muteAllButton.setEnabled(false);
                     setScopeButton.setEnabled(false);
                     leaveRoom.setEnabled(false);
-                    startButton.setEnabled(true);
                     pauseButton.setEnabled(false);
                     getScopeButton.setEnabled(false);
                     try {
@@ -179,6 +184,10 @@ extends JPanel {
         this.getScopeButton.setEnabled(false);
         this.getScopeButton.addActionListener(actionEvent -> getScopeButtonActionPerformed());
         connectionPanel.add(getScopeButton);
+        this.muteAllButton = new JButton("Mute All");
+        this.muteAllButton.setEnabled(false);
+        this.muteAllButton.addActionListener(actionEvent -> muteAllButtonActionPerformed());
+        connectionPanel.add(muteAllButton);
 
 
         JPanel actionPanel = generatePanel(1, 1);
@@ -190,9 +199,9 @@ extends JPanel {
             this.sharedValues.getServerConnection().joinRoom(serverList.getSelectedValue());
             this.newRoom.setEnabled(false);
             this.leaveRoom.setEnabled(true);
-            this.startButton.setEnabled(false);
             this.pauseButton.setEnabled(true);
             this.getScopeButton.setEnabled(true);
+            this.muteAllButton.setEnabled(true);
         });
         roomMenu.add(joinRoom);
 
@@ -222,7 +231,9 @@ extends JPanel {
                         if (sharedValues.getServerConnection().getCurrentRoom().equals("server")) {
                             roomMenu.show(serverList, e.getPoint().x, e.getPoint().y);
                         } else {
-                            clientMenu.show(serverList, e.getPoint().x, e.getPoint().y);
+                            if (!allMuted) {
+                                clientMenu.show(serverList, e.getPoint().x, e.getPoint().y);
+                            }
                         }
                     }
                 }
@@ -231,6 +242,17 @@ extends JPanel {
         serverList.setModel(this.sharedValues.getServerListModel());
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         actionPanel.add(serverList);
+    }
+
+    private void muteAllButtonActionPerformed() {
+        if (this.allMuted) {
+            this.muteAllButton.setText("Mute All");
+            sharedValues.getServerConnection().unmuteAllMembers();
+        } else {
+            this.muteAllButton.setText("Unmute All");
+            sharedValues.getServerConnection().muteAllMembers();
+        }
+        this.allMuted = !this.allMuted;
     }
 
     private void getScopeButtonActionPerformed() {
@@ -242,10 +264,11 @@ extends JPanel {
     }
 
     private void LeaveRoomButtonActionPerformed() {
+        this.allMuted = false;
         this.newRoom.setEnabled(true);
+        this.muteAllButton.setEnabled(false);
         this.setScopeButton.setEnabled(false);
         this.leaveRoom.setEnabled(false);
-        this.startButton.setEnabled(true);
         this.pauseButton.setEnabled(false);
         this.getScopeButton.setEnabled(false);
         this.sharedValues.getServerConnection().leaveRoom();
@@ -260,10 +283,10 @@ extends JPanel {
         System.out.println(roomNameValue);
         if ((roomNameValue != null) && (roomNameValue.length() > 0)) {
             this.sharedValues.getServerConnection().createRoom(roomNameValue);
+            this.muteAllButton.setEnabled(true);
             this.setScopeButton.setEnabled(true);
             this.newRoom.setEnabled(false);
             this.leaveRoom.setEnabled(true);
-            this.startButton.setEnabled(false);
             this.pauseButton.setEnabled(true);
         }
     }
