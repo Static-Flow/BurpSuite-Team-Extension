@@ -102,7 +102,7 @@ The jar file is prebuilt for you within the build/jar folder. To use the prebuil
   
   #### Get room scope
   2. Click the "Get Room Scope" button
- ## Room Actions
+ ## Tool Actions
   These actions apply to Burpsuite tools outside of the "Burp TC" tab
   
   #### Share a Repeater payload with whole Team
