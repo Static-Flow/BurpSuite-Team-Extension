@@ -35,9 +35,7 @@ There are two parts that make this collaborative web app testing possible. 1st i
 # How to start the Server
 
 ```
-git clone https://github.com/GDSSecurity/BurpSuite-Team-Extension.git
-cd BurpSuite-Team-Extension
-git submodule update --init --recursive
+git clone https://github.com/GDSSecurity/BurpSuiteTeamServer.git
 cd BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
 go build
 ./BurpSuiteTeamServer
