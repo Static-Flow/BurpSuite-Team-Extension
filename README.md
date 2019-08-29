@@ -29,11 +29,9 @@ There are two parts that make this collaborative web app testing possible. 1st i
 # How to start the Server
 
 ```
-git clone https://github.com/Static-Flow/BurpSuite-Team-Extension.git
-cd BurpSuite-Team-Extension
-git submodule update --init --recursive
-cd BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
-go build
+go get github.com/Static-Flow/BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
+cd ~/go/src/github.com/Static-Flow/BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
+go build BurpSuiteTeamServer.go
 ./BurpSuiteTeamServer
 ```
 Output:
