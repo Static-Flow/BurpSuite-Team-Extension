@@ -3,7 +3,9 @@ package teamExtension;
 import burp.IHttpRequestResponse;
 import burp.IHttpService;
 
-class HttpRequestResponse implements IHttpRequestResponse
+import java.util.Arrays;
+
+public class HttpRequestResponse implements IHttpRequestResponse
 {
 
     private byte[] request;
@@ -71,5 +73,16 @@ class HttpRequestResponse implements IHttpRequestResponse
     @Override
     public void setHttpService(IHttpService httpService) {
         this.httpService = new HttpService(httpService);
+    }
+
+    @Override
+    public String toString() {
+        return "HttpRequestResponse{" +
+                "request=" + Arrays.toString(request) +
+                ", response=" + Arrays.toString(response) +
+                ", comment='" + comment + '\'' +
+                ", highlight='" + highlight + '\'' +
+                ", httpService=" + httpService +
+                '}';
     }
 }

@@ -23,7 +23,6 @@ class ServerConnector {
     private ServerListenThread listener;
     private Thread listenerThread;
 
-
     ServerConnector(String serverAddress, int serverPort, String yourName,
                     String serverPassword, SharedValues sharedValues) {
         System.out.println("Establishing connection. Please wait ...");
@@ -101,7 +100,6 @@ class ServerConnector {
             String encryptedMsg = this.sharedValues.getAESCrypter().encrypt(
                     this.sharedValues.getGson().toJson(message));
             this.messageQueue.put(encryptedMsg);
-            System.out.println("Outside messageQueue count" + this.messageQueue.size());
         } catch (Exception e) {
             e.printStackTrace();
         }

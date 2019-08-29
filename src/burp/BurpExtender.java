@@ -11,7 +11,12 @@ implements IBurpExtender,
 
     public void registerExtenderCallbacks(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
         iBurpExtenderCallbacks.setExtensionName("Burp Team Collaborator");
-        this.sharedValues = new SharedValues(iBurpExtenderCallbacks);
+        sharedValues = new SharedValues(iBurpExtenderCallbacks);
+        CustomURLServer innerServer = new CustomURLServer(sharedValues);
+        Thread innerServerThread = new Thread(innerServer);
+        innerServerThread.start();
+        sharedValues.setInnerServer(innerServer);
+        iBurpExtenderCallbacks.registerProxyListener(sharedValues);
         iBurpExtenderCallbacks.registerScopeChangeListener(new ScopeChangeListener(this.sharedValues));
         iBurpExtenderCallbacks.registerExtensionStateListener(new ExtensionStateListener(this.sharedValues));
         iBurpExtenderCallbacks.registerContextMenuFactory(new ManualRequestSenderContextMenu(this.sharedValues));

@@ -1,11 +1,16 @@
 package teamExtension;
 
 import javax.swing.*;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.text.BadLocationException;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.util.Base64;
 
 public class BurpTeamPanel
 extends JPanel {
@@ -25,11 +30,15 @@ extends JPanel {
     private JButton setScopeButton;
     private JButton getScopeButton;
     private JButton muteAllButton;
+    private JButton saveConfigButton;
 
     public BurpTeamPanel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
         this.initComponents();
         this.allMuted = false;
+        this.theirAddress.setText(this.sharedValues.getCallbacks().loadExtensionSetting("servername"));
+        this.theirPort.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverport"));
+        this.serverPassword.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverpass"));
     }
 
     private void StartButtonActionPerformed() {
@@ -46,6 +55,7 @@ extends JPanel {
                         try {
                             sharedValues.getServerConnection().authenticate();
                             sharedValues.getServerConnection().getServerRooms();
+                            saveConfigButton.setEnabled(true);
                             startButton.setText("Disconnect");
                             newRoom.setEnabled(true);
                             sharedValues.startCommunication();
@@ -80,6 +90,7 @@ extends JPanel {
                     sharedValues.getServerListModel().removeAllElements();
                     allMuted = false;
                     startButton.setText("Connect");
+                    saveConfigButton.setEnabled(false);
                     newRoom.setEnabled(false);
                     muteAllButton.setEnabled(false);
                     setScopeButton.setEnabled(false);
@@ -117,7 +128,7 @@ extends JPanel {
         JLabel explainer = new JLabel();
         explainer.setHorizontalAlignment(SwingConstants.CENTER);
         infoPanel.add(explainer);
-        explainer.setText("<html>Welcome to the BurpSuite Team " +
+        explainer.setText("<html>Welcome to the Burp Suite Team " +
                 "Collaborator! <br>This extension allows you to work in " +
                 "tandem with multiple BurpSuite users by sharing their requests " +
                 "with you. Any request that comes through their proxy will " +
@@ -188,6 +199,14 @@ extends JPanel {
         this.muteAllButton.setEnabled(false);
         this.muteAllButton.addActionListener(actionEvent -> muteAllButtonActionPerformed());
         connectionPanel.add(muteAllButton);
+        this.saveConfigButton = new JButton("Save Server Config");
+        this.saveConfigButton.setEnabled(false);
+        this.saveConfigButton.addActionListener(e -> {
+            this.sharedValues.getCallbacks().saveExtensionSetting("servername", this.theirAddress.getText());
+            this.sharedValues.getCallbacks().saveExtensionSetting("serverport", this.theirPort.getText());
+            this.sharedValues.getCallbacks().saveExtensionSetting("serverpass", this.serverPassword.getText());
+        });
+        connectionPanel.add(this.saveConfigButton);
 
 
         JPanel actionPanel = generatePanel(1, 1);
@@ -242,6 +261,67 @@ extends JPanel {
         serverList.setModel(this.sharedValues.getServerListModel());
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         actionPanel.add(serverList);
+
+        JPanel sharedPayloadsPanel = new JPanel(new BorderLayout());
+        sharedPayloadsPanel.setBorder(BorderFactory.createLineBorder(Color.white));
+        GridBagConstraints gbc_panel = new GridBagConstraints();
+        gbc_panel.fill = GridBagConstraints.BOTH;
+        gbc_panel.gridx = 0;
+        gbc_panel.gridy = 2;
+        add(sharedPayloadsPanel, gbc_panel);
+        JTable j = new JTable(this.sharedValues.getSharedLinksModel());
+        j.setPreferredScrollableViewportSize(j.getPreferredSize());
+        final JPopupMenu popupMenu = new JPopupMenu();
+        popupMenu.addPopupMenuListener(new PopupMenuListener() {
+
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    int rowAtPoint = j.rowAtPoint(SwingUtilities.convertPoint(popupMenu, new Point(0, 0), j));
+                    System.out.println(rowAtPoint);
+                    if (rowAtPoint > -1) {
+                        j.setRowSelectionInterval(rowAtPoint, rowAtPoint);
+
+                    }
+                });
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+            }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {
+            }
+        });
+        JMenuItem removeLinkItem = new JMenuItem("Remove Link");
+        removeLinkItem.addActionListener(e -> {
+            ((SharedLinksModel) j.getModel()).removeBurpMessage(j.getSelectedRow());
+        });
+        JMenuItem getHTMLLinkItem = new JMenuItem("Get HTML Link");
+        getHTMLLinkItem.addActionListener(e -> {
+            HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
+            StringSelection stringSelection = new StringSelection(generateHTMLLink(burpMessage));
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents(stringSelection, null);
+            JOptionPane.showMessageDialog(null, "Link has been added to the clipboard");
+        });
+        JMenuItem getLinkItem = new JMenuItem("Get Link");
+        getLinkItem.addActionListener(e -> {
+            HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
+            StringSelection stringSelection = new StringSelection("burptcmessage/" +
+                    Base64.getEncoder().encodeToString(this.sharedValues.getGson().toJson(burpMessage).getBytes()));
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents(stringSelection, null);
+            JOptionPane.showMessageDialog(null, "Link has been added to the clipboard");
+        });
+        popupMenu.add(getLinkItem);
+        popupMenu.add(getHTMLLinkItem);
+        popupMenu.add(removeLinkItem);
+        j.setComponentPopupMenu(popupMenu);
+        JScrollPane sp = new JScrollPane(j);
+        sharedPayloadsPanel.add(sp, BorderLayout.CENTER);
+
     }
 
     private void muteAllButtonActionPerformed() {
@@ -299,6 +379,13 @@ extends JPanel {
             this.sharedValues.unpauseCommunication();
             this.pauseButton.setText("Pause");
         }
+    }
+
+    private String generateHTMLLink(HttpRequestResponse burpMessage) {
+        return "<a href='http://burptcmessage/" +
+                Base64.getEncoder().encodeToString(this.sharedValues.getGson().toJson(burpMessage).getBytes())
+                + "'>" + this.sharedValues.getCallbacks().getHelpers().analyzeRequest(burpMessage).getUrl().toString()
+                + "</a>";
     }
 
     private JPanel generatePanel(int xLocation, int yLocation) {

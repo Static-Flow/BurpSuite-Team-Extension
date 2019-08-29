@@ -31,7 +31,6 @@ class ServerWriteThread implements Runnable {
             if (!this.messageQueue.isEmpty()) {
                 try {
                     String message = this.messageQueue.take();
-                    System.out.println("Inside messg count: " + this.messageQueue.size());
                     this.streamOut.println(message);
                     this.streamOut.flush();
                     if (message.equalsIgnoreCase("bye")) break;

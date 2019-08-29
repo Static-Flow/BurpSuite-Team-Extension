@@ -1,30 +1,33 @@
 package teamExtension;
 
-import burp.IBurpExtenderCallbacks;
-import burp.IExtensionHelpers;
-import burp.IInterceptedProxyMessage;
-import burp.IProxyListener;
+import burp.*;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class SharedValues
 implements IProxyListener {
     static final String ROOM = "room";
+    boolean innerServerRunning;
     private IExtensionHelpers extensionHelpers;
     private ServerConnector serverConnector = null;
     private IBurpExtenderCallbacks callbacks;
     private Gson gson;
     private ServerListModel serverListModel;
+    private SharedLinksModel sharedLinksModel;
     private boolean communicating;
     private AESEncryptDecrypt AESCrypter;
     private String currentScope;
+    private CustomURLServer innerServer;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
         this.communicating = false;
         this.extensionHelpers = iBurpExtenderCallbacks.getHelpers();
         this.callbacks = iBurpExtenderCallbacks;
-        this.gson = new Gson();
+        GsonBuilder builder = new GsonBuilder();
+        this.gson = builder.create();
         this.serverListModel = new ServerListModel();
+        this.sharedLinksModel = new SharedLinksModel(this);
         this.currentScope = getCallbacks().saveConfigAsJson("target.scope");
     }
 
@@ -80,8 +83,15 @@ implements IProxyListener {
 
     public void processProxyMessage(boolean isResponse,
                                     IInterceptedProxyMessage iInterceptedProxyMessage) {
-        if (!isResponse && this.communicating) {
-	        HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
+        IHttpService httpService = iInterceptedProxyMessage.getMessageInfo().getHttpService();
+        if ("burptcmessage".equalsIgnoreCase(iInterceptedProxyMessage.getMessageInfo().getHttpService().getHost())) {
+            System.out.println("got custom link request");
+            iInterceptedProxyMessage.getMessageInfo().setHttpService(this.getCallbacks().getHelpers().buildHttpService(
+                    "127.0.0.1", 8888, httpService.getProtocol()));
+            httpService = iInterceptedProxyMessage.getMessageInfo().getHttpService();
+            System.out.println(httpService.getHost());
+        } else if (!isResponse && this.communicating) {
+            HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
             BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE,
                     this.getServerConnection().getCurrentRoom(), ROOM, null);
             this.getServerConnection().sendMessage(burpMessage);
@@ -112,5 +122,22 @@ implements IProxyListener {
 
         this.currentScope = scopeJson;
         System.out.println(this.currentScope);
+    }
+
+    SharedLinksModel getSharedLinksModel() {
+        return sharedLinksModel;
+    }
+
+    void setCustomServerRunning(boolean running) {
+        this.innerServerRunning = running;
+    }
+
+    public CustomURLServer getInnerServer() {
+        return this.innerServer;
+    }
+
+    public void setInnerServer(CustomURLServer innerServer) {
+        this.innerServer = innerServer;
+        this.setCustomServerRunning(true);
     }
 }

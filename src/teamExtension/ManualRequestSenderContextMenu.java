@@ -1,15 +1,9 @@
 package teamExtension;
 
-import burp.IContextMenuFactory;
-import burp.IContextMenuInvocation;
-import burp.IHttpRequestResponse;
-import burp.IRequestInfo;
+import burp.*;
 
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class ManualRequestSenderContextMenu implements IContextMenuFactory {
 
@@ -27,11 +21,10 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         HttpRequestResponse httpRequestResponse =
                 new HttpRequestResponse();
         if (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_INTRUDER_PAYLOAD_POSITIONS) {
-            IHttpRequestResponse requestResponse =
-                    invocation.getSelectedMessages()[0];
-            httpRequestResponse.setRequest(requestResponse.getRequest());
-            httpRequestResponse.setResponse(requestResponse.getResponse());
-            httpRequestResponse.setHttpService(requestResponse.getHttpService());
+            System.out.println(Arrays.toString(invocation.getSelectionBounds()));
+            IHttpRequestResponseWithMarkers markers = (IHttpRequestResponseWithMarkers) invocation.getSelectedMessages()[0];
+            System.out.println(markers.getRequestMarkers());
+            httpRequestResponse = new HttpRequestResponse(invocation.getSelectedMessages()[0]);
             BurpTCMessage intruderMessage = new BurpTCMessage(
                     httpRequestResponse, MessageType.INTRUDER_MESSAGE, sharedValues.getServerConnection().getCurrentRoom(),
                     sendingContext == CONTEXT_SEND_TO_INDIVIDUAL ? sendingContextArgument : "room",
@@ -47,31 +40,42 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                     null);
             sharedValues.getServerConnection().sendMessage(intruderMessage);
         } else {
-            for (IHttpRequestResponse reqResp : invocation.getSelectedMessages()) {
-                IRequestInfo req =
-                        this.sharedValues.getExtensionHelpers()
-                                .analyzeRequest(reqResp.getHttpService(),
-                                        reqResp.getRequest());
-                System.out.println(req.getUrl());
-                System.out.println(this.sharedValues.getCallbacks().getSiteMap(
-                        req.getUrl().getProtocol() + "://" +
-                                req.getUrl().getHost() + req.getUrl()
-                                .getPath()).length);
-                IHttpRequestResponse[] requests = this.sharedValues.getCallbacks().getSiteMap(
-                        req.getUrl().getProtocol() + "://" +
-                                req.getUrl().getHost() + req.getUrl()
-                                .getPath());
-                for (IHttpRequestResponse reqRep : requests) {
-                    httpRequestResponse.setRequest(reqRep.getRequest());
-                    httpRequestResponse.setResponse(reqRep.getResponse());
-                    httpRequestResponse.setHttpService(reqRep.getHttpService());
-                    BurpTCMessage intruderMessage = new BurpTCMessage(
-                            httpRequestResponse, MessageType.BURP_MESSAGE, sharedValues.getServerConnection().getCurrentRoom(),
-                            sendingContext == CONTEXT_SEND_TO_GROUP ? "room" : sendingContextArgument,
-                            null);
-                    sharedValues.getServerConnection().sendMessage(intruderMessage);
+            HttpRequestResponse finalHttpRequestResponse = httpRequestResponse;
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                public Boolean doInBackground() {
+                    for (IHttpRequestResponse reqResp : invocation.getSelectedMessages()) {
+                        IRequestInfo req =
+                                sharedValues.getExtensionHelpers()
+                                        .analyzeRequest(reqResp.getHttpService(),
+                                                reqResp.getRequest());
+                        System.out.println(req.getUrl());
+                        System.out.println(sharedValues.getCallbacks().getSiteMap(
+                                req.getUrl().getProtocol() + "://" +
+                                        req.getUrl().getHost() + req.getUrl()
+                                        .getPath()).length);
+                        IHttpRequestResponse[] requests = sharedValues.getCallbacks().getSiteMap(
+                                req.getUrl().getProtocol() + "://" +
+                                        req.getUrl().getHost() + req.getUrl()
+                                        .getPath());
+                        for (IHttpRequestResponse reqRep : requests) {
+                            finalHttpRequestResponse.setRequest(reqRep.getRequest());
+                            finalHttpRequestResponse.setResponse(reqRep.getResponse());
+                            finalHttpRequestResponse.setHttpService(reqRep.getHttpService());
+                            BurpTCMessage intruderMessage = new BurpTCMessage(
+                                    finalHttpRequestResponse, MessageType.BURP_MESSAGE, sharedValues.getServerConnection().getCurrentRoom(),
+                                    sendingContext == CONTEXT_SEND_TO_GROUP ? "room" : sendingContextArgument,
+                                    null);
+                            sharedValues.getServerConnection().sendMessage(intruderMessage);
+                        }
+                    }
+                    return Boolean.TRUE;
                 }
-            }
+
+                @Override
+                public void done() {
+                }
+            }.execute();
         }
     }
 
@@ -79,6 +83,28 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         httpRequestResponse.setRequest(requestResponse.getRequest());
         httpRequestResponse.setResponse(requestResponse.getResponse());
         httpRequestResponse.setHttpService(requestResponse.getHttpService());
+    }
+
+    private ArrayList createLinkMenu(IContextMenuInvocation invocation) {
+        JMenuItem click = new JMenuItem("create link");
+        click.addActionListener(e ->
+                createLinkForSelectedRequests(invocation));
+        ArrayList menuList = new ArrayList();
+        menuList.add(click);
+        return menuList;
+    }
+
+    private void createLinkForSelectedRequests(IContextMenuInvocation invocation) {
+        HttpRequestResponse httpRequestResponse =
+                new HttpRequestResponse();
+        for (IHttpRequestResponse message : invocation.getSelectedMessages()) {
+            httpRequestResponse.setRequest(message.getRequest());
+            httpRequestResponse.setHttpService(message.getHttpService());
+            this.sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse);
+            System.out.println(Base64.getEncoder().encodeToString(this.sharedValues.getGson()
+                    .toJson(httpRequestResponse).getBytes()));
+        }
+
     }
 
     private ArrayList createMenu(String topMenuName, IContextMenuInvocation invocation) {
@@ -107,21 +133,25 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
 
     @Override
     public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
-        if (!sharedValues.getServerConnection().getCurrentRoom().equals(sharedValues.getServerConnection().SERVER)) {
+        ArrayList<JMenuItem> menues = new ArrayList<>();
+        if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
+            System.out.println("here");
+            menues.addAll(createLinkMenu(invocation));
+        }
+        if (sharedValues.getServerConnection() != null &&
+                !sharedValues.getServerConnection().getCurrentRoom().equals(sharedValues.getServerConnection().SERVER)) {
             if (Arrays.asList(IContextMenuInvocation.CONTEXT_PROXY_HISTORY,
                     IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE,
                     IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE).contains(invocation.getInvocationContext())) {
-                return createMenu("Share Request", invocation);
+                menues.addAll(createMenu("Share Request", invocation));
             } else if (Objects.equals(IContextMenuInvocation.CONTEXT_INTRUDER_PAYLOAD_POSITIONS, invocation.getInvocationContext())) {
-                return createMenu("Share Intruder Payload", invocation);
+                menues.addAll(createMenu("Share Intruder Payload", invocation));
 
             } else if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
-                return createMenu("Share Repeater Payload", invocation);
-
-            } else {
-                return null;
+                menues.addAll(createMenu("Share Repeater Payload", invocation));
             }
         }
-        return null;
+        System.out.println("Size: " + menues.size());
+        return menues;
     }
 }

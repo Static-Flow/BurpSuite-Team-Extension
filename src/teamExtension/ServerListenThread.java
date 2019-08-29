@@ -52,6 +52,12 @@ class ServerListenThread implements Runnable {
                         }
                         break;
                     case BURP_MESSAGE:
+                        if (msg.getRequestResponse().getRequest() != null && msg.getRequestResponse().getResponse() != null) {
+                            this.sharedValues.getCallbacks().doPassiveScan(msg.getRequestResponse().getHttpService().getHost()
+                                    , msg.getRequestResponse().getHttpService().getPort(), msg.getRequestResponse()
+                                            .getHttpService().getProtocol().equalsIgnoreCase("https"),
+                                    msg.getRequestResponse().getRequest(), msg.getRequestResponse().getResponse());
+                        }
                         this.sharedValues.getCallbacks().addToSiteMap(msg.getRequestResponse());
                         break;
                     case REPEATER_MESSAGE:
