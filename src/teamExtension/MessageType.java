@@ -14,4 +14,6 @@ public enum MessageType {
     JOIN_ROOM_MESSAGE, //For joining a room
     LEAVE_ROOM_MESSAGE, //For leaving a room
     SYNC_SCOPE_MESSAGE, //For syncing scope between clients
+    SCAN_ISSUE_MESSAGE, //For new scan issues
+    COOKIE_MESSAGE     //For new cookies
 }

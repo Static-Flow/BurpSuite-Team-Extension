@@ -3,10 +3,10 @@ package teamExtension;
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 
-public class SharedLinksModel extends AbstractTableModel {
+class SharedLinksModel extends AbstractTableModel {
 
-    private ArrayList<HttpRequestResponse> httpRequestResponses;
-    private SharedValues sharedValues;
+    private final ArrayList<HttpRequestResponse> httpRequestResponses;
+    private final SharedValues sharedValues;
 
     SharedLinksModel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;

@@ -8,8 +8,10 @@ public class BurpExtender
 implements IBurpExtender,
         ITab {
     private SharedValues sharedValues;
+    private IBurpExtenderCallbacks callbacks;
 
     public void registerExtenderCallbacks(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
+        callbacks = iBurpExtenderCallbacks;
         iBurpExtenderCallbacks.setExtensionName("Burp Team Collaborator");
         sharedValues = new SharedValues(iBurpExtenderCallbacks);
         CustomURLServer innerServer = new CustomURLServer(sharedValues);
@@ -20,6 +22,7 @@ implements IBurpExtender,
         iBurpExtenderCallbacks.registerScopeChangeListener(new ScopeChangeListener(this.sharedValues));
         iBurpExtenderCallbacks.registerExtensionStateListener(new ExtensionStateListener(this.sharedValues));
         iBurpExtenderCallbacks.registerContextMenuFactory(new ManualRequestSenderContextMenu(this.sharedValues));
+        iBurpExtenderCallbacks.registerScannerListener(new ScannerListener(this.sharedValues));
         iBurpExtenderCallbacks.addSuiteTab(this);
     }
 
@@ -28,6 +31,8 @@ implements IBurpExtender,
     }
 
     public Component getUiComponent() {
-        return new BurpTeamPanel(this.sharedValues);
+        BurpTeamPanel panel = new BurpTeamPanel(this.sharedValues);
+        callbacks.customizeUiComponent(panel);
+        return panel;
     }
 }

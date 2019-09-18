@@ -16,7 +16,7 @@ public class BurpTeamPanel
 extends JPanel {
 	private static final long serialVersionUID = 1L;
     private boolean allMuted;
-	private SharedValues sharedValues;
+    private final SharedValues sharedValues;
     private JButton startButton;
     private JTextField yourName;
     private JTextField theirPort;
@@ -295,9 +295,7 @@ extends JPanel {
             }
         });
         JMenuItem removeLinkItem = new JMenuItem("Remove Link");
-        removeLinkItem.addActionListener(e -> {
-            ((SharedLinksModel) j.getModel()).removeBurpMessage(j.getSelectedRow());
-        });
+        removeLinkItem.addActionListener(e -> ((SharedLinksModel) j.getModel()).removeBurpMessage(j.getSelectedRow()));
         JMenuItem getHTMLLinkItem = new JMenuItem("Get HTML Link");
         getHTMLLinkItem.addActionListener(e -> {
             HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());

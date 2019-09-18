@@ -4,9 +4,15 @@ import burp.IHttpService;
 
 class HttpService implements IHttpService
 {
-    private String host;
-    private int port;
-    private String protocol;
+    private final String host;
+    private final int port;
+    private final String protocol;
+
+    HttpService() {
+        host = "";
+        port = 0;
+        protocol = "";
+    }
 
     HttpService(IHttpService copy) {
         this.host = copy.getHost();

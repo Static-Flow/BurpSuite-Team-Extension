@@ -3,27 +3,36 @@ package teamExtension;
 import burp.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SharedValues
 implements IProxyListener {
     static final String ROOM = "room";
+    static final Type cookieJsonListType = new TypeToken<List<Cookie>>() {
+    }.getType();
     boolean innerServerRunning;
-    private IExtensionHelpers extensionHelpers;
+    private final IExtensionHelpers extensionHelpers;
     private ServerConnector serverConnector = null;
-    private IBurpExtenderCallbacks callbacks;
-    private Gson gson;
-    private ServerListModel serverListModel;
-    private SharedLinksModel sharedLinksModel;
+    private final IBurpExtenderCallbacks callbacks;
+    private final Gson gson;
+    private final ServerListModel serverListModel;
+    private final SharedLinksModel sharedLinksModel;
     private boolean communicating;
     private AESEncryptDecrypt AESCrypter;
     private String currentScope;
     private CustomURLServer innerServer;
+    private final List<ICookie> currentCookieJar;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
         this.communicating = false;
-        this.extensionHelpers = iBurpExtenderCallbacks.getHelpers();
         this.callbacks = iBurpExtenderCallbacks;
+        this.extensionHelpers = this.callbacks.getHelpers();
+        this.currentCookieJar = this.callbacks.getCookieJarContents();
         GsonBuilder builder = new GsonBuilder();
         this.gson = builder.create();
         this.serverListModel = new ServerListModel();
@@ -95,7 +104,25 @@ implements IProxyListener {
             BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE,
                     this.getServerConnection().getCurrentRoom(), ROOM, null);
             this.getServerConnection().sendMessage(burpMessage);
+            shareNewCookies();
+
         }
+    }
+
+    private void shareNewCookies() {
+        List<Cookie> newItems = new ArrayList<>();
+        for (ICookie cookie : this.callbacks.getCookieJarContents()) {
+            if (this.currentCookieJar.contains(cookie)) {
+                if (!this.currentCookieJar.get(this.currentCookieJar.indexOf(cookie)).equals(cookie)) {
+                    newItems.add(new Cookie(cookie));
+                }
+            } else {
+                newItems.add(new Cookie(cookie));
+            }
+        }
+        BurpTCMessage cookieMessage = new BurpTCMessage(null, MessageType.COOKIE_MESSAGE,
+                this.getServerConnection().getCurrentRoom(), ROOM, this.getGson().toJson(newItems, cookieJsonListType));
+        this.getServerConnection().sendMessage(cookieMessage);
     }
 
     IExtensionHelpers getExtensionHelpers() {
@@ -132,7 +159,7 @@ implements IProxyListener {
         this.innerServerRunning = running;
     }
 
-    public CustomURLServer getInnerServer() {
+    CustomURLServer getInnerServer() {
         return this.innerServer;
     }
 

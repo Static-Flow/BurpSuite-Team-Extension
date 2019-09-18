@@ -10,15 +10,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 class ServerConnector {
     private static final String ME = "me";
-    public static final String ALL = "all";
+    private static final String ALL = "all";
     public final String SERVER = "server";
-    private String serverAddress;
-    private int serverPort;
-    private String yourName;
-    private String serverPassword;
+    private final String serverAddress;
+    private final int serverPort;
+    private final String yourName;
+    private final String serverPassword;
     private String currentRoom;
-    private SharedValues sharedValues;
-    private BlockingQueue<String> messageQueue;
+    private final SharedValues sharedValues;
+    private final BlockingQueue<String> messageQueue;
     private ServerWriteThread writer;
     private ServerListenThread listener;
     private Thread listenerThread;
@@ -51,7 +51,7 @@ class ServerConnector {
             encryptedMessage = this.sharedValues.getAESCrypter().encrypt(
                     this.sharedValues.getGson().toJson(loginMessage)
             );
-            System.out.println(this.sharedValues.getAESCrypter().decrypt(encryptedMessage));
+            //System.out.println(this.sharedValues.getAESCrypter().decrypt(encryptedMessage));
         } catch (Exception e) {
             e.printStackTrace();
             throw new LoginFailedException();

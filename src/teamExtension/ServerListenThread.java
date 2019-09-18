@@ -1,9 +1,12 @@
 package teamExtension;
 
+import burp.ICookie;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.List;
 
 class ServerListenThread implements Runnable {
 
@@ -42,8 +45,27 @@ class ServerListenThread implements Runnable {
                 }
                 String decryptedMessage = this.sharedValues.getAESCrypter().decrypt(message);
                 BurpTCMessage msg = this.sharedValues.getGson().fromJson(decryptedMessage, BurpTCMessage.class);
-                System.out.println("Got message  " + msg);
                 switch (msg.getMessageType()) {
+                    case COOKIE_MESSAGE:
+                        List<ICookie> newCookies = this.sharedValues.getGson().fromJson(msg.getData(), SharedValues.cookieJsonListType);
+                        for (ICookie newCookie : newCookies) {
+                            this.sharedValues.getCallbacks().updateCookieJar(newCookie);
+                        }
+                        break;
+                    case SCAN_ISSUE_MESSAGE:
+                        System.out.println("Got new issue from client");
+                        ScanIssue decodedIssue = this.sharedValues.getGson().fromJson(msg.getData(), ScanIssue.class);
+                        /*
+                        This hack is to bypass an infinite loop that occurs when I inject a new issue with addScanIssue()
+                        and I also have a ScanListener setup. When I add an issue the Scanlistener activates which sends
+                        out a new issue to addScanIssue.....You get the point. To bypass that, since passing a custom
+                        ScanIssue to addScanIssue() looks no different than the internal one, I commandeer the remediation
+                        value to set it to true. This is normally null in all the issues I've seen but if another
+                        extension sets it to something meaningful this will clobber it. Sorry.
+                         */
+                        decodedIssue.setRemediation();
+                        this.sharedValues.getCallbacks().addScanIssue(decodedIssue);
+                        break;
                     case SYNC_SCOPE_MESSAGE:
                         try {
                             this.sharedValues.getCallbacks().loadConfigFromJson(msg.getData());
@@ -52,12 +74,6 @@ class ServerListenThread implements Runnable {
                         }
                         break;
                     case BURP_MESSAGE:
-                        if (msg.getRequestResponse().getRequest() != null && msg.getRequestResponse().getResponse() != null) {
-                            this.sharedValues.getCallbacks().doPassiveScan(msg.getRequestResponse().getHttpService().getHost()
-                                    , msg.getRequestResponse().getHttpService().getPort(), msg.getRequestResponse()
-                                            .getHttpService().getProtocol().equalsIgnoreCase("https"),
-                                    msg.getRequestResponse().getRequest(), msg.getRequestResponse().getResponse());
-                        }
                         this.sharedValues.getCallbacks().addToSiteMap(msg.getRequestResponse());
                         break;
                     case REPEATER_MESSAGE:
@@ -84,6 +100,7 @@ class ServerListenThread implements Runnable {
                                 this.sharedValues.getServerListModel().addElement(member);
                             }
                         }
+                        break;
                     case GET_ROOMS_MESSAGE:
                         this.sharedValues.getServerListModel().removeAllElements();
                         if (msg.getData().length() == 0) {

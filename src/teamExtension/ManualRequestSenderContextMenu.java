@@ -9,7 +9,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
 
     private static final byte CONTEXT_SEND_TO_GROUP = 0;
     private static final byte CONTEXT_SEND_TO_INDIVIDUAL = 1;
-    private SharedValues sharedValues;
+    private final SharedValues sharedValues;
 
     public ManualRequestSenderContextMenu(SharedValues sharedValues) {
         this.sharedValues = sharedValues;

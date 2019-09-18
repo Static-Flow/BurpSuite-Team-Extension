@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public class ExtensionStateListener
 implements IExtensionStateListener {
-    private SharedValues sharedValues;
+    private final SharedValues sharedValues;
 
     public ExtensionStateListener(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
