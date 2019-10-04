@@ -2,7 +2,11 @@ package teamExtension;
 
 import burp.*;
 
+import javax.swing.Timer;
 import javax.swing.*;
+import java.awt.*;
+import java.net.URL;
+import java.util.List;
 import java.util.*;
 
 public class ManualRequestSenderContextMenu implements IContextMenuFactory {
@@ -85,11 +89,11 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         httpRequestResponse.setHttpService(requestResponse.getHttpService());
     }
 
-    private ArrayList createLinkMenu(IContextMenuInvocation invocation) {
+    private Collection<? extends JMenuItem> createLinkMenu(IContextMenuInvocation invocation) {
         JMenuItem click = new JMenuItem("create link");
         click.addActionListener(e ->
                 createLinkForSelectedRequests(invocation));
-        ArrayList menuList = new ArrayList();
+        ArrayList<JMenuItem> menuList = new ArrayList<>();
         menuList.add(click);
         return menuList;
     }
@@ -101,13 +105,60 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             httpRequestResponse.setRequest(message.getRequest());
             httpRequestResponse.setHttpService(message.getHttpService());
             this.sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse);
-            System.out.println(Base64.getEncoder().encodeToString(this.sharedValues.getGson()
-                    .toJson(httpRequestResponse).getBytes()));
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                public Boolean doInBackground() {
+                    JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
+                    burpTab.setBackgroundAt(
+                            burpTab.indexOfTab("Burp TC"),
+                            new Color(0xff6633)
+                    );
+                    Timer timer = new Timer(3000, e -> {
+                        if (burpTab.getBackground().equals(new Color(0x3C3F41))) {
+                            //We are in dark mode
+                            burpTab.setBackgroundAt(burpTab.indexOfTab("Burp TC"), new Color(0xBBBBBB));
+                        } else {
+                            burpTab.setBackgroundAt(burpTab.indexOfTab("Burp TC"), Color.black);
+                        }
+
+                    });
+                    timer.setRepeats(false);
+                    timer.start();
+                    return Boolean.TRUE;
+                }
+
+                @Override
+                public void done() {
+                }
+            }.execute();
         }
 
     }
 
-    private ArrayList createMenu(String topMenuName, IContextMenuInvocation invocation) {
+
+    private Collection<? extends JMenuItem> creatCommentMenu(IContextMenuInvocation invocation) {
+        JMenuItem menu = new JMenuItem("Comments");
+        menu.addActionListener(e -> {
+            System.out.println(invocation.getSelectedMessages().length);
+            IHttpRequestResponse message = invocation.getSelectedMessages()[0];
+            URL selectedRequestUrl = sharedValues.getExtensionHelpers().analyzeRequest(message).getUrl();
+            HttpRequestResponse requestResponseWithComments = sharedValues.getRequestCommentModel()
+                    .findRequestWithCommentsByUrl(selectedRequestUrl);
+            if (requestResponseWithComments != null)
+                displayCommentsFrame(requestResponseWithComments);
+            else
+                displayCommentsFrame(new HttpRequestResponse(message));
+        });
+        ArrayList<JMenuItem> menuList = new ArrayList<>();
+        menuList.add(menu);
+        return menuList;
+    }
+
+    private void displayCommentsFrame(HttpRequestResponse requestResponse) {
+        new CommentFrame(sharedValues.getCallbacks(), requestResponse, sharedValues.getServerConnection().getYourName());
+    }
+
+    private Collection<? extends JMenuItem> createSharingMenu(String topMenuName, IContextMenuInvocation invocation) {
         JMenu menu = new JMenu(topMenuName);
         JMenuItem toGroupMenuItem = new JMenuItem("To Group");
         toGroupMenuItem.addActionListener(e ->
@@ -126,7 +177,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             }
         }
         menu.add(toTeammateMenu);
-        ArrayList menuList = new ArrayList();
+        ArrayList<JMenuItem> menuList = new ArrayList<>();
         menuList.add(menu);
         return menuList;
     }
@@ -143,12 +194,13 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             if (Arrays.asList(IContextMenuInvocation.CONTEXT_PROXY_HISTORY,
                     IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE,
                     IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE).contains(invocation.getInvocationContext())) {
-                menues.addAll(createMenu("Share Request", invocation));
+                menues.addAll(createSharingMenu("Share Request", invocation));
+                menues.addAll(creatCommentMenu(invocation));
             } else if (Objects.equals(IContextMenuInvocation.CONTEXT_INTRUDER_PAYLOAD_POSITIONS, invocation.getInvocationContext())) {
-                menues.addAll(createMenu("Share Intruder Payload", invocation));
+                menues.addAll(createSharingMenu("Share Intruder Payload", invocation));
 
             } else if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
-                menues.addAll(createMenu("Share Repeater Payload", invocation));
+                menues.addAll(createSharingMenu("Share Repeater Payload", invocation));
             }
         }
         System.out.println("Size: " + menues.size());

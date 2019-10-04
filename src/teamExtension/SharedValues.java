@@ -6,6 +6,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +28,8 @@ implements IProxyListener {
     private String currentScope;
     private CustomURLServer innerServer;
     private final List<ICookie> currentCookieJar;
+    private BurpTeamPanel burpPanel;
+    private RequestCommentModel requestCommentModel;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
@@ -37,6 +41,7 @@ implements IProxyListener {
         this.gson = builder.create();
         this.serverListModel = new ServerListModel();
         this.sharedLinksModel = new SharedLinksModel(this);
+        this.requestCommentModel = new RequestCommentModel(this.callbacks);
         this.currentScope = getCallbacks().saveConfigAsJson("target.scope");
     }
 
@@ -95,11 +100,12 @@ implements IProxyListener {
         IHttpService httpService = iInterceptedProxyMessage.getMessageInfo().getHttpService();
         if ("burptcmessage".equalsIgnoreCase(iInterceptedProxyMessage.getMessageInfo().getHttpService().getHost())) {
             System.out.println("got custom link request");
+            callbacks.issueAlert("This host created a custom repeater payload. If you did not paste this yourself " +
+                    "or clicked on a link you should leave that site.");
             iInterceptedProxyMessage.getMessageInfo().setHttpService(this.getCallbacks().getHelpers().buildHttpService(
                     "127.0.0.1", 8888, httpService.getProtocol()));
-            httpService = iInterceptedProxyMessage.getMessageInfo().getHttpService();
-            System.out.println(httpService.getHost());
-        } else if (!isResponse && this.communicating) {
+        } else if (!isResponse && this.communicating &&
+                callbacks.isInScope(getExtensionHelpers().analyzeRequest(iInterceptedProxyMessage.getMessageInfo()).getUrl())) {
             HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
             BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE,
                     this.getServerConnection().getCurrentRoom(), ROOM, null);
@@ -166,5 +172,22 @@ implements IProxyListener {
     public void setInnerServer(CustomURLServer innerServer) {
         this.innerServer = innerServer;
         this.setCustomServerRunning(true);
+        try {
+            getCallbacks().excludeFromScope(new URL("http://burptcmessage"));
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    BurpTeamPanel getBurpPanel() {
+        return this.burpPanel;
+    }
+
+    public void setBurpPanel(BurpTeamPanel panel) {
+        this.burpPanel = panel;
+    }
+
+    public RequestCommentModel getRequestCommentModel() {
+        return requestCommentModel;
     }
 }

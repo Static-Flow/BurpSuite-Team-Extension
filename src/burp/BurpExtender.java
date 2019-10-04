@@ -13,17 +13,28 @@ implements IBurpExtender,
     public void registerExtenderCallbacks(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
         callbacks = iBurpExtenderCallbacks;
         iBurpExtenderCallbacks.setExtensionName("Burp Team Collaborator");
-        sharedValues = new SharedValues(iBurpExtenderCallbacks);
-        CustomURLServer innerServer = new CustomURLServer(sharedValues);
-        Thread innerServerThread = new Thread(innerServer);
-        innerServerThread.start();
-        sharedValues.setInnerServer(innerServer);
-        iBurpExtenderCallbacks.registerProxyListener(sharedValues);
-        iBurpExtenderCallbacks.registerScopeChangeListener(new ScopeChangeListener(this.sharedValues));
-        iBurpExtenderCallbacks.registerExtensionStateListener(new ExtensionStateListener(this.sharedValues));
-        iBurpExtenderCallbacks.registerContextMenuFactory(new ManualRequestSenderContextMenu(this.sharedValues));
-        iBurpExtenderCallbacks.registerScannerListener(new ScannerListener(this.sharedValues));
-        iBurpExtenderCallbacks.addSuiteTab(this);
+        HttpRequestResponse req = new HttpRequestResponse();
+        req.setRequest(new byte[]{1, 2, 3});
+        req.setResponse(new byte[]{1, 2, 3});
+        req.setHttpService(new HttpService());
+        new CommentFrame(callbacks, req, "me");
+//        sharedValues = new SharedValues(iBurpExtenderCallbacks);
+//        CustomURLServer innerServer;
+//        try {
+//            innerServer = new CustomURLServer(sharedValues);
+//            Thread innerServerThread = new Thread(innerServer);
+//            innerServerThread.start();
+//            sharedValues.setInnerServer(innerServer);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        iBurpExtenderCallbacks.registerProxyListener(sharedValues);
+//        iBurpExtenderCallbacks.registerScopeChangeListener(new ScopeChangeListener(this.sharedValues));
+//        iBurpExtenderCallbacks.registerExtensionStateListener(new ExtensionStateListener(this.sharedValues));
+//        iBurpExtenderCallbacks.registerContextMenuFactory(new ManualRequestSenderContextMenu(this.sharedValues));
+//        iBurpExtenderCallbacks.registerScannerListener(new ScannerListener(this.sharedValues));
+//        iBurpExtenderCallbacks.addSuiteTab(this);
     }
 
     public String getTabCaption() {
@@ -32,6 +43,7 @@ implements IBurpExtender,
 
     public Component getUiComponent() {
         BurpTeamPanel panel = new BurpTeamPanel(this.sharedValues);
+        this.sharedValues.setBurpPanel(panel);
         callbacks.customizeUiComponent(panel);
         return panel;
     }

@@ -36,7 +36,7 @@ class ServerConnector {
     }
 
     void authenticate()
-            throws LoginFailedException, IOException {
+            throws LoginFailedException, IOException, DuplicateNameException {
         System.out.println("Authenticating");
         Socket socket = new Socket(this.serverAddress, this.serverPort);
         PrintWriter streamOut = new PrintWriter(socket.getOutputStream(), true);
@@ -51,7 +51,6 @@ class ServerConnector {
             encryptedMessage = this.sharedValues.getAESCrypter().encrypt(
                     this.sharedValues.getGson().toJson(loginMessage)
             );
-            //System.out.println(this.sharedValues.getAESCrypter().decrypt(encryptedMessage));
         } catch (Exception e) {
             e.printStackTrace();
             throw new LoginFailedException();
@@ -73,6 +72,8 @@ class ServerConnector {
                 listenerThread.start();
                 writerThread.start();
                 System.out.println("Connected: " + socket);
+            } else if (loginResponse.getAuthentication().trim().equals("DUPLICATE")) {
+                throw new DuplicateNameException();
             } else {
                 throw new LoginFailedException();
             }

@@ -2,13 +2,13 @@ package teamExtension;
 
 import burp.IHttpService;
 
-class HttpService implements IHttpService
+public class HttpService implements IHttpService
 {
     private final String host;
     private final int port;
     private final String protocol;
 
-    HttpService() {
+    public HttpService() {
         host = "";
         port = 0;
         protocol = "";

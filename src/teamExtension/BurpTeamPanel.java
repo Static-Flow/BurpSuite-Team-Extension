@@ -1,6 +1,7 @@
 package teamExtension;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.text.BadLocationException;
@@ -36,6 +37,7 @@ extends JPanel {
         this.sharedValues = sharedValues;
         this.initComponents();
         this.allMuted = false;
+        this.yourName.setText(this.sharedValues.getCallbacks().loadExtensionSetting("username"));
         this.theirAddress.setText(this.sharedValues.getCallbacks().loadExtensionSetting("servername"));
         this.theirPort.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverport"));
         this.serverPassword.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverpass"));
@@ -59,18 +61,19 @@ extends JPanel {
                             startButton.setText("Disconnect");
                             newRoom.setEnabled(true);
                             sharedValues.startCommunication();
-                            statusText.getDocument().insertString(
-                                    statusText.getDocument().getLength(),
+                            statusText.getDocument().insertString(0,
                                     "Connected to server\n", null);
                         } catch (LoginFailedException e) {
-                            statusText.getDocument().insertString(
-                                    statusText.getDocument().getLength(),
+                            statusText.getDocument().insertString(0,
                                     "Incorrect Password\n", null);
                             return Boolean.TRUE;
                         } catch (IOException e) {
-                            statusText.getDocument().insertString(
-                                    statusText.getDocument().getLength(),
+                            statusText.getDocument().insertString(0,
                                     "Server connection timeout\n", null);
+                            return Boolean.TRUE;
+                        } catch (DuplicateNameException e) {
+                            statusText.getDocument().insertString(0,
+                                    "Your name must be unique\n", null);
                             return Boolean.TRUE;
                         }
                     } catch (BadLocationException e) {
@@ -98,8 +101,7 @@ extends JPanel {
                     pauseButton.setEnabled(false);
                     getScopeButton.setEnabled(false);
                     try {
-                        statusText.getDocument().insertString(
-                                statusText.getDocument().getLength(),
+                        statusText.getDocument().insertString(0,
                                 "Disconnected from server\n", null);
                     } catch (BadLocationException e) {
                         e.printStackTrace();
@@ -117,6 +119,7 @@ extends JPanel {
         gridBagLayout.rowWeights = new double[]{0.0, 0.0, 1.0, Double.MIN_VALUE};
         setLayout(gridBagLayout);
 
+        //info panel
         JPanel infoPanel = new JPanel();
         GridBagConstraints gbc_infoPanel = new GridBagConstraints();
         gbc_infoPanel.fill = GridBagConstraints.BOTH;
@@ -134,14 +137,16 @@ extends JPanel {
                 "with you. Any request that comes through their proxy will " +
                 "show up in your site map as well.</html>\n");
 
-        JPanel statusPanel = generatePanel(1, 0);
+        JPanel statusPanel = generatePanel(1, 0, "Server Alerts");
         statusPanel.setLayout(new BorderLayout(0, 0));
         
         statusText = new JTextPane();
         statusText.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(statusText);
         statusPanel.add(scrollPane);
+        //end info pane;
 
+        //connection panel
         JPanel connectionPanel = new JPanel();
         GridBagConstraints gbc_connectionPanel = new GridBagConstraints();
         gbc_connectionPanel.fill = GridBagConstraints.BOTH;
@@ -202,15 +207,18 @@ extends JPanel {
         this.saveConfigButton = new JButton("Save Server Config");
         this.saveConfigButton.setEnabled(false);
         this.saveConfigButton.addActionListener(e -> {
+            this.sharedValues.getCallbacks().saveExtensionSetting("username", this.yourName.getText());
             this.sharedValues.getCallbacks().saveExtensionSetting("servername", this.theirAddress.getText());
             this.sharedValues.getCallbacks().saveExtensionSetting("serverport", this.theirPort.getText());
             this.sharedValues.getCallbacks().saveExtensionSetting("serverpass", this.serverPassword.getText());
         });
         connectionPanel.add(this.saveConfigButton);
+        //end connection panel
 
 
-        JPanel actionPanel = generatePanel(1, 1);
-        actionPanel.setLayout(new BorderLayout(2, 2));
+        //rooms/members panel
+        JPanel roomsPanel = generatePanel(1, 1, "Rooms");
+        roomsPanel.setLayout(new BorderLayout(2, 2));
 
         JPopupMenu roomMenu = new JPopupMenu();
         JMenuItem joinRoom = new JMenuItem("Join");
@@ -260,15 +268,21 @@ extends JPanel {
         });
         serverList.setModel(this.sharedValues.getServerListModel());
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        actionPanel.add(serverList);
+        roomsPanel.add(serverList);
+        //end rooms/members panel
 
-        JPanel sharedPayloadsPanel = new JPanel(new BorderLayout());
-        sharedPayloadsPanel.setBorder(BorderFactory.createLineBorder(Color.white));
-        GridBagConstraints gbc_panel = new GridBagConstraints();
-        gbc_panel.fill = GridBagConstraints.BOTH;
-        gbc_panel.gridx = 0;
-        gbc_panel.gridy = 2;
-        add(sharedPayloadsPanel, gbc_panel);
+        //bottom Tab Pane
+        JTabbedPane optionsPane = new JTabbedPane();
+        GridBagConstraints optionsPanelConstraints = new GridBagConstraints();
+        optionsPanelConstraints.fill = GridBagConstraints.BOTH;
+        optionsPanelConstraints.gridwidth = 2;
+        optionsPanelConstraints.gridx = 0;
+        optionsPanelConstraints.gridy = 2;
+        add(optionsPane, optionsPanelConstraints);
+        //end bottom tab pane
+
+        //shareable links
+        JPanel sharedPayloadsPanel = new JPanel();
         JTable j = new JTable(this.sharedValues.getSharedLinksModel());
         j.setPreferredScrollableViewportSize(j.getPreferredSize());
         final JPopupMenu popupMenu = new JPopupMenu();
@@ -319,6 +333,34 @@ extends JPanel {
         j.setComponentPopupMenu(popupMenu);
         JScrollPane sp = new JScrollPane(j);
         sharedPayloadsPanel.add(sp, BorderLayout.CENTER);
+        optionsPane.addTab("Shared Links", sharedPayloadsPanel);
+        //end shareable links
+
+        //options panel
+        JPanel optionsPanel = new JPanel();
+        JCheckBox shareCookies = new JCheckBox("Share Cookies");
+        shareCookies.setSelected(true);
+        optionsPanel.add(shareCookies);
+
+        JCheckBox receiveCookies = new JCheckBox("Receive Shared Cookies");
+        receiveCookies.setSelected(true);
+        optionsPanel.add(receiveCookies);
+
+        JCheckBox shareIssues = new JCheckBox("Share Issues");
+        shareIssues.setSelected(true);
+        optionsPanel.add(shareIssues);
+
+        JCheckBox receiveIssues = new JCheckBox("Receive Shared Issues");
+        receiveIssues.setSelected(true);
+        optionsPanel.add(receiveIssues);
+        optionsPane.addTab("Configuration", optionsPanel);
+        //end options panel
+
+        //comments panel
+        JPanel commentsPanel = new JPanel();
+        JTable commentsTable = new JTable();
+        optionsPane.addTab("Comments", commentsPanel);
+        //end comments panel
 
     }
 
@@ -386,11 +428,10 @@ extends JPanel {
                 + "</a>";
     }
 
-    private JPanel generatePanel(int xLocation, int yLocation) {
+    private JPanel generatePanel(int xLocation, int yLocation, String name) {
         JPanel panel = new JPanel();
-        panel.setBorder(BorderFactory.createLineBorder(Color.white));
+        panel.setBorder(new TitledBorder(name));
         GridBagConstraints gbc_panel = new GridBagConstraints();
-        gbc_panel.insets = new Insets(0, 0, 5, 0);
         gbc_panel.fill = GridBagConstraints.BOTH;
         gbc_panel.gridx = xLocation;
         gbc_panel.gridy = yLocation;

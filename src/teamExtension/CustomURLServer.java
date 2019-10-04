@@ -9,20 +9,19 @@ import java.util.StringTokenizer;
 
 public class CustomURLServer implements Runnable {
 
-    private static final int port = 8888;
     private static final String newLine = "\r\n";
     private final SharedValues sharedValues;
 
     private ServerSocket socket;
 
-    public CustomURLServer(SharedValues sharedValues) {
+    public CustomURLServer(SharedValues sharedValues) throws IOException {
         this.sharedValues = sharedValues;
+        socket = new ServerSocket(0);
     }
 
     @Override
     public void run() {
         try {
-            socket = new ServerSocket(port);
             while (sharedValues.innerServerRunning) {
                 Socket connection = socket.accept();
                 try {
@@ -42,7 +41,6 @@ public class CustomURLServer implements Runnable {
                         HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(
                                 new String(Base64.getDecoder().decode(httpQueryString.substring(1))),
                                 HttpRequestResponse.class);
-                        System.out.println(httpRequestResponse.getHttpService().getHost());
                         this.sharedValues.getCallbacks().sendToRepeater(
                                 httpRequestResponse.getHttpService().getHost(),
                                 httpRequestResponse.getHttpService().getPort(),

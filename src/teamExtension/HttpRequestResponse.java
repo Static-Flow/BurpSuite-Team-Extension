@@ -3,6 +3,7 @@ package teamExtension;
 import burp.IHttpRequestResponse;
 import burp.IHttpService;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class HttpRequestResponse implements IHttpRequestResponse
@@ -13,8 +14,9 @@ public class HttpRequestResponse implements IHttpRequestResponse
     private String comment;
     private String highlight;
     private HttpService httpService;
+    private transient ArrayList<RequestComment> comments;
 
-    HttpRequestResponse() {
+    public HttpRequestResponse() {
     }
 
     HttpRequestResponse(IHttpRequestResponse copy) {
@@ -23,6 +25,7 @@ public class HttpRequestResponse implements IHttpRequestResponse
         this.comment = copy.getComment();
         this.highlight = copy.getHighlight();
         this.httpService = new HttpService(copy.getHttpService());
+        this.comments = new ArrayList<>();
     }
 
     @Override
@@ -84,5 +87,17 @@ public class HttpRequestResponse implements IHttpRequestResponse
                 ", highlight='" + highlight + '\'' +
                 ", httpService=" + httpService +
                 '}';
+    }
+
+    public void addComment(RequestComment comment) {
+        this.comments.add(comment);
+    }
+
+    public ArrayList<RequestComment> getComments() {
+        return this.comments;
+    }
+
+    public boolean hasComments() {
+        return this.comments.size() > 0;
     }
 }
