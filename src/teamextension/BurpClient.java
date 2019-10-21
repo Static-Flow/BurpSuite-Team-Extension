@@ -82,8 +82,6 @@ class BurpClient {
                         sharedValues.serverConnectionFailure(401);
                     } else if (reason.contains("409")) {
                         sharedValues.serverConnectionFailure(409);
-                    } else {
-                        sharedValues.serverConnectionFailure(-1);
                     }
                 }
             }
@@ -91,6 +89,9 @@ class BurpClient {
             @Override
             public void onError(Exception ex) {
                 sharedValues.getCallbacks().printOutput("Exception occured ...\n" + ex + "\n");
+                if (ex instanceof SSLException) {
+                    sharedValues.serverConnectionFailure(-4);
+                }
             }
         };
         SSLContext sslContext = getSSLContextFromLetsEncrypt();

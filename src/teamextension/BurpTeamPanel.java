@@ -58,8 +58,6 @@ extends JPanel {
                 saveConfigButton.setEnabled(true);
                 startButton.setText("Disconnect");
                 newRoom.setEnabled(true);
-            } else {
-                writeToAlertPane("Failed to connect to server");
             }
         } else {
             // if we are connected, leave
@@ -90,6 +88,9 @@ extends JPanel {
             case -3:
                 writeToAlertPane("Failed to connect to server: You didn't set" +
                         " the server cert/key files or they are incorrect.");
+                break;
+            case -4:
+                writeToAlertPane("Failed to connect to server: invalid certificate or key.");
                 break;
             case -1:
                 writeToAlertPane("Failed to connect to server: Unknown " +
