@@ -24,21 +24,22 @@ public class ScannerListener implements IScannerListener {
      */
     @Override
     public void newScanIssue(IScanIssue issue) {
-        if (this.sharedValues.getClient().isConnected() && this.sharedValues.getBurpPanel().getShareIssuesSetting()) {
+        if (this.sharedValues.getClient().isConnected() && this.sharedValues.getBurpPanel().inRoom() &&
+                this.sharedValues.getBurpPanel().getShareIssuesSetting()) {
             sharedValues.getCallbacks().printOutput("New issue");
             ArrayList<HttpRequestResponse> httpMessages = new ArrayList<>();
             for (IHttpRequestResponse httpRequestResponse : issue.getHttpMessages()) {
                 httpMessages.add(new HttpRequestResponse(httpRequestResponse));
-            }
-            HttpRequestResponse[] httpRequestResponses = new HttpRequestResponse[httpMessages.size()];
-            ScanIssue decodedIssue = new ScanIssue(new HttpService(issue.getHttpService()),
-                    issue.getUrl(), httpMessages.toArray(httpRequestResponses),
-                    issue.getIssueName(), issue.getIssueDetail(), issue.getSeverity(),
-                    issue.getConfidence(), issue.getRemediationDetail());
-            if (decodedIssue.getRemediationDetail() == null || !decodedIssue.getRemediationDetail().equals("true")) {
-                sharedValues.getClient().sendMessage(new BurpTCMessage(null,
-                        MessageType.SCAN_ISSUE_MESSAGE, SharedValues.ROOM,
-                        this.sharedValues.getGson().toJson(decodedIssue)));
+                HttpRequestResponse[] httpRequestResponses = new HttpRequestResponse[httpMessages.size()];
+                ScanIssue decodedIssue = new ScanIssue(new HttpService(issue.getHttpService()),
+                        issue.getUrl(), httpMessages.toArray(httpRequestResponses),
+                        issue.getIssueName(), issue.getIssueDetail(), issue.getSeverity(),
+                        issue.getConfidence(), issue.getRemediationDetail());
+                if (decodedIssue.getRemediationDetail() == null || !decodedIssue.getRemediationDetail().equals("true")) {
+                    sharedValues.getClient().sendMessage(new BurpTCMessage(null,
+                            MessageType.SCAN_ISSUE_MESSAGE, SharedValues.ROOM,
+                            this.sharedValues.getGson().toJson(decodedIssue)));
+                }
             }
         }
     }

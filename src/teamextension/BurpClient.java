@@ -105,9 +105,11 @@ class BurpClient {
                 "\n");
         switch (burpTCMessage.getMessageType()) {
             case COOKIE_MESSAGE:
-                List<ICookie> newCookies = this.sharedValues.getGson().fromJson(burpTCMessage.getData(), SharedValues.cookieJsonListType);
-                for (ICookie newCookie : newCookies) {
-                    this.sharedValues.getCallbacks().updateCookieJar(newCookie);
+                if (this.sharedValues.getBurpPanel().getReceiveSharedCookiesSetting()) {
+                    List<ICookie> newCookies = this.sharedValues.getGson().fromJson(burpTCMessage.getData(), SharedValues.cookieJsonListType);
+                    for (ICookie newCookie : newCookies) {
+                        this.sharedValues.getCallbacks().updateCookieJar(newCookie);
+                    }
                 }
                 break;
             case SCAN_ISSUE_MESSAGE:
@@ -122,7 +124,9 @@ class BurpClient {
                         extension sets it to something meaningful this will clobber it. Sorry.
                          */
                 decodedIssue.setRemediation();
-                this.sharedValues.getCallbacks().addScanIssue(decodedIssue);
+                if (this.sharedValues.getBurpPanel().getReceiveSharedIssuesSetting()) {
+                    this.sharedValues.getCallbacks().addScanIssue(decodedIssue);
+                }
                 break;
             case SYNC_SCOPE_MESSAGE:
                 try {

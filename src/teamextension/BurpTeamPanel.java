@@ -455,7 +455,7 @@ extends JPanel {
         return shareCookies.isSelected();
     }
 
-    public boolean getReceiveSharedCookiesSetting() {
+    boolean getReceiveSharedCookiesSetting() {
         return receiveCookies.isSelected();
     }
 
@@ -463,7 +463,7 @@ extends JPanel {
         return shareIssues.isSelected();
     }
 
-    public boolean getReceiveSharedIssuesSetting() {
+    boolean getReceiveSharedIssuesSetting() {
         return receiveIssues.isSelected();
     }
 
