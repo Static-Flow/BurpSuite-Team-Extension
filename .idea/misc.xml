@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="JavadocGenerationManager">
-    <option name="OUTPUT_DIRECTORY" value="$PROJECT_DIR$/docs" />
-    <option name="OPTION_SCOPE" value="private" />
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/pom.xml" />
+      </list>
+    </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="false" project-jdk-name="1.8" project-jdk-type="JavaSDK">
-    <output url="file://$PROJECT_DIR$/build" />
+    <output url="file://$PROJECT_DIR$/target/classes" />
   </component>
 </project>
