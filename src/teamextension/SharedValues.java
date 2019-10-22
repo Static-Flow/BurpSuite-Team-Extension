@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+import javax.swing.*;
 import java.io.File;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
@@ -71,6 +72,13 @@ public class SharedValues {
         }
     }
 
+    void closeCommentSessions() {
+        this.requestCommentModel.clearValues();
+        for (CommentFrame commentSession : getRequestCommentModel().getCommentSessions()) {
+            commentSession.close();
+        }
+    }
+
     BurpClient getClient() {
         return this.chatClient;
     }
@@ -89,19 +97,30 @@ public class SharedValues {
 
     void shareNewCookies() {
         if (this.getBurpPanel().getShareCookiesSetting()) {
-            List<Cookie> newItems = new ArrayList<>();
-            for (ICookie cookie : this.callbacks.getCookieJarContents()) {
-                if (this.currentCookieJar.contains(cookie)) {
-                    if (!this.currentCookieJar.get(this.currentCookieJar.indexOf(cookie)).equals(cookie)) {
-                        newItems.add(new Cookie(cookie));
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                public Boolean doInBackground() {
+                    List<Cookie> newItems = new ArrayList<>();
+                    for (ICookie cookie : callbacks.getCookieJarContents()) {
+                        if (currentCookieJar.contains(cookie)) {
+                            if (!currentCookieJar.get(currentCookieJar.indexOf(cookie)).equals(cookie)) {
+                                newItems.add(new Cookie(cookie));
+                            }
+                        } else {
+                            newItems.add(new Cookie(cookie));
+                        }
                     }
-                } else {
-                    newItems.add(new Cookie(cookie));
+                    BurpTCMessage cookieMessage = new BurpTCMessage(null, MessageType.COOKIE_MESSAGE,
+                            ROOM, getGson().toJson(newItems, cookieJsonListType));
+                    getClient().sendMessage(cookieMessage);
+                    return Boolean.TRUE;
                 }
-            }
-            BurpTCMessage cookieMessage = new BurpTCMessage(null, MessageType.COOKIE_MESSAGE,
-                    ROOM, this.getGson().toJson(newItems, cookieJsonListType));
-            this.getClient().sendMessage(cookieMessage);
+
+                @Override
+                public void done() {
+                    //we don't need to do any cleanup so this is empty
+                }
+            }.execute();
         }
     }
 

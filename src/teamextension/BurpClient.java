@@ -1,7 +1,6 @@
 package teamextension;
 
 import burp.ICookie;
-import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.java_websocket.client.WebSocketClient;
@@ -186,8 +185,12 @@ class BurpClient {
             case GET_COMMENTS_MESSAGE:
                 Type listType = new TypeToken<ArrayList<HttpRequestResponse>>() {
                 }.getType();
-                List<HttpRequestResponse> httpRequestResponses = new Gson().fromJson(burpTCMessage.getData(), listType);
+                List<HttpRequestResponse> httpRequestResponses =
+                        sharedValues.getGson().fromJson(burpTCMessage.getData(),
+                                listType);
                 for (HttpRequestResponse requestResponse : httpRequestResponses) {
+                    this.sharedValues.getCallbacks().printOutput("Got new " +
+                            "Comments: " + requestResponse.toString());
                     this.sharedValues.getRequestCommentModel().updateOrAddRequestResponse(requestResponse);
                 }
                 break;

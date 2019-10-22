@@ -63,27 +63,40 @@ extends JPanel {
     }
 
     private void startButtonActionPerformed() {
-        if (this.sharedValues.getClient() == null || !this.sharedValues.getClient().isConnected()) {
-            // if we are not connected, connect
-            if (this.sharedValues.connectToServer(
-                    theirAddress.getText() + ":" + theirPort.getText(),
-                    serverPassword.getText(),
-                    yourName.getText())) {
-                // if we connect successfully
-                saveConfigButton.setEnabled(true);
-                startButton.setText("Disconnect");
-                newRoom.setEnabled(true);
-            }
-        } else {
-            // if we are connected, leave
-            if (sharedValues.getClient().isConnected()) {
-                if (inRoom()) {
-                    this.sharedValues.getClient().leaveRoom();
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                if (sharedValues.getClient() == null || !sharedValues.getClient().isConnected()) {
+                    // if we are not connected, connect
+                    if (sharedValues.connectToServer(
+                            theirAddress.getText() + ":" + theirPort.getText(),
+                            serverPassword.getText(),
+                            yourName.getText())) {
+                        // if we connect successfully
+                        saveConfigButton.setEnabled(true);
+                        startButton.setText("Disconnect");
+                        newRoom.setEnabled(true);
+                    }
+                } else {
+                    // if we are connected, leave
+                    if (sharedValues.getClient().isConnected()) {
+                        if (inRoom()) {
+                            sharedValues.getClient().leaveRoom();
+                        }
+                        sharedValues.getClient().leaveServer();
+                    }
+                    resetConnectionUI();
+
+                    sharedValues.closeCommentSessions();
                 }
-                this.sharedValues.getClient().leaveServer();
+                return Boolean.TRUE;
             }
-            resetConnectionUI();
-        }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     void resetConnectionUIWithReason(int reason) {
@@ -125,11 +138,22 @@ extends JPanel {
     }
 
     void writeToAlertPane(String message) {
-        try {
-            statusText.getDocument().insertString(0, message + "\n", null);
-        } catch (BadLocationException e) {
-            this.sharedValues.getCallbacks().printError(e.getMessage());
-        }
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                try {
+                    statusText.getDocument().insertString(0, message + "\n", null);
+                } catch (BadLocationException e) {
+                    sharedValues.getCallbacks().printError(e.getMessage());
+                }
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     private void readyToConnect() {
@@ -365,12 +389,23 @@ extends JPanel {
         JPopupMenu roomMenu = new JPopupMenu();
         JMenuItem joinRoom = new JMenuItem("Join");
         joinRoom.addActionListener(e1 -> {
-            this.sharedValues.getClient().joinRoom(serverList.getSelectedValue());
-            this.newRoom.setEnabled(false);
-            this.leaveRoom.setEnabled(true);
-            this.pauseButton.setEnabled(true);
-            this.getScopeButton.setEnabled(true);
-            this.muteAllButton.setEnabled(true);
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                public Boolean doInBackground() {
+                    sharedValues.getClient().joinRoom(serverList.getSelectedValue());
+                    newRoom.setEnabled(false);
+                    leaveRoom.setEnabled(true);
+                    pauseButton.setEnabled(true);
+                    getScopeButton.setEnabled(true);
+                    muteAllButton.setEnabled(true);
+                    return Boolean.TRUE;
+                }
+
+                @Override
+                public void done() {
+                    //we don't need to do any cleanup so this is empty
+                }
+            }.execute();
         });
         roomMenu.add(joinRoom);
 
@@ -568,8 +603,10 @@ extends JPanel {
                 JList list = (JList) evt.getSource();
                 if (evt.getClickCount() == 2) {
                     int index = list.locationToIndex(evt.getPoint());
-                    new CommentFrame(sharedValues, ((RequestCommentModel) commentsList.getModel()).getTrueElementAt(index),
+                    CommentFrame commentSession = new CommentFrame(sharedValues,
+                            ((RequestCommentModel) commentsList.getModel()).getTrueElementAt(index),
                             sharedValues.getClient().getUsername());
+                    sharedValues.getRequestCommentModel().addCommentSession(commentSession);
                 }
             }
         });
@@ -651,33 +688,56 @@ extends JPanel {
     }
 
     private void leaveRoomButtonActionPerformed() {
-        sharedValues.getServerListModel().removeAllElements();
-        this.allMuted = false;
-        this.newRoom.setEnabled(true);
-        this.muteAllButton.setEnabled(false);
-        this.setScopeButton.setEnabled(false);
-        this.leaveRoom.setEnabled(false);
-        this.pauseButton.setEnabled(false);
-        this.getScopeButton.setEnabled(false);
-        this.sharedValues.getClient().leaveRoom();
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                sharedValues.getServerListModel().removeAllElements();
+                allMuted = false;
+                newRoom.setEnabled(true);
+                muteAllButton.setEnabled(false);
+                setScopeButton.setEnabled(false);
+                leaveRoom.setEnabled(false);
+                pauseButton.setEnabled(false);
+                getScopeButton.setEnabled(false);
+                sharedValues.getClient().leaveRoom();
+                sharedValues.closeCommentSessions();
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     private void addRoomButtonActionPerformed() {
-        JDialog roomOptions = new JDialog();
-        roomOptions.setTitle("Room Options");
-        JTextField roomName = new JTextField();
-        roomOptions.add(roomName);
-        String roomNameValue = JOptionPane.showInputDialog(roomOptions, "Please enter a room name");
-        this.sharedValues.getCallbacks().printOutput(roomNameValue);
-        if ((roomNameValue != null) && (roomNameValue.length() > 0)) {
-            sharedValues.getServerListModel().removeAllElements();
-            this.sharedValues.getClient().createRoom(roomNameValue);
-            this.muteAllButton.setEnabled(true);
-            this.setScopeButton.setEnabled(true);
-            this.newRoom.setEnabled(false);
-            this.leaveRoom.setEnabled(true);
-            this.pauseButton.setEnabled(true);
-        }
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                JDialog roomOptions = new JDialog();
+                roomOptions.setTitle("Room Options");
+                JTextField roomName = new JTextField();
+                roomOptions.add(roomName);
+                String roomNameValue = JOptionPane.showInputDialog(roomOptions, "Please enter a room name");
+                sharedValues.getCallbacks().printOutput(roomNameValue);
+                if ((roomNameValue != null) && (roomNameValue.length() > 0)) {
+                    sharedValues.getServerListModel().removeAllElements();
+                    sharedValues.getClient().createRoom(roomNameValue);
+                    muteAllButton.setEnabled(true);
+                    setScopeButton.setEnabled(true);
+                    newRoom.setEnabled(false);
+                    leaveRoom.setEnabled(true);
+                    pauseButton.setEnabled(true);
+                }
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     private void pauseButtonActionPerformed() {

@@ -16,6 +16,11 @@ class RequestCommentModel extends AbstractListModel {
         this.sharedValues = sharedValues;
     }
 
+    void clearValues() {
+        this.requestResponsesWithComments.clear();
+        fireContentsChanged(this, 0, 0);
+    }
+
     void addCommentToNewOrExistingReqResp(RequestComment comment, HttpRequestResponse possibleRequestResponse) {
         if (this.requestResponsesWithComments.contains(possibleRequestResponse)) {
             int foundIndex = this.requestResponsesWithComments.indexOf(possibleRequestResponse);
@@ -30,7 +35,6 @@ class RequestCommentModel extends AbstractListModel {
 
     private void contentChanged(int index) {
         fireContentsChanged(this, index, index);
-        updateCommentSessions(this.requestResponsesWithComments.get(index));
         new SwingWorker<Boolean, Void>() {
             @Override
             public Boolean doInBackground() {
@@ -83,10 +87,16 @@ class RequestCommentModel extends AbstractListModel {
     public String getElementAt(int index) {
         HttpRequestResponse requestResponse = requestResponsesWithComments.get(index);
         String url = sharedValues.getCallbacks().getHelpers().analyzeRequest(requestResponse).getUrl().toString();
-        return requestResponse.getComments().get(0).getUserWhoCommented() +
-                " Started a thread about " +
-                url.substring(0, 30) + "..." +
-                " with " + requestResponse.getComments().size() + " Comments";
+        if (url.length() > 120) {
+            return requestResponse.getComments().get(0).getUserWhoCommented() +
+                    " Started a thread about " +
+                    url.substring(0, 120) + "..." +
+                    " with " + requestResponse.getComments().size() + " Comments";
+        } else {
+            return requestResponse.getComments().get(0).getUserWhoCommented() +
+                    " Started a thread about " + url + " with " +
+                    requestResponse.getComments().size() + " Comments";
+        }
     }
 
     void updateOrAddRequestResponse(HttpRequestResponse requestResponseWithComments) {
@@ -98,14 +108,23 @@ class RequestCommentModel extends AbstractListModel {
             this.requestResponsesWithComments.add(requestResponseWithComments);
             contentChanged(this.requestResponsesWithComments.size() - 1);
         }
-
+        updateCommentSessions(requestResponseWithComments);
     }
 
     void removeCommentSession(CommentFrame commentSession) {
         this.openCommentSessions.remove(commentSession);
+        sharedValues.getCallbacks().printOutput("Removed a commentSession for" +
+                " a total of " + getCommentSessions().size());
     }
 
-    public void addCommentSession(CommentFrame commentFrame) {
+    void addCommentSession(CommentFrame commentFrame) {
         this.openCommentSessions.add(commentFrame);
+
+        sharedValues.getCallbacks().printOutput("Added new commentSession for" +
+                " a total of " + getCommentSessions().size());
+    }
+
+    ArrayList<CommentFrame> getCommentSessions() {
+        return this.openCommentSessions;
     }
 }

@@ -13,6 +13,7 @@ implements IExtensionStateListener {
     }
 
     public void extensionUnloaded() {
+        this.sharedValues.closeCommentSessions();
         this.sharedValues.setCustomServerRunning(false);
         try {
             if (this.sharedValues.getInnerServer().getSocket() != null) {
