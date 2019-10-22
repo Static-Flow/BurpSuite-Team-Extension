@@ -2,6 +2,7 @@ package teamextension;
 
 import burp.ICookie;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ServerHandshake;
@@ -10,6 +11,8 @@ import javax.net.ssl.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -91,6 +94,8 @@ class BurpClient {
                 sharedValues.getCallbacks().printOutput("Exception occured ...\n" + ex + "\n");
                 if (ex instanceof SSLException) {
                     sharedValues.serverConnectionFailure(-4);
+                } else if (ex instanceof ConnectException) {
+                    sharedValues.serverConnectionFailure(-5);
                 }
             }
         };
@@ -174,6 +179,18 @@ class BurpClient {
                     }
                 }
                 break;
+            case COMMENT_MESSAGE:
+                HttpRequestResponse requestResponseWithComments = burpTCMessage.getRequestResponse();
+                this.sharedValues.getRequestCommentModel().updateOrAddRequestResponse(requestResponseWithComments);
+                break;
+            case GET_COMMENTS_MESSAGE:
+                Type listType = new TypeToken<ArrayList<HttpRequestResponse>>() {
+                }.getType();
+                List<HttpRequestResponse> httpRequestResponses = new Gson().fromJson(burpTCMessage.getData(), listType);
+                for (HttpRequestResponse requestResponse : httpRequestResponses) {
+                    this.sharedValues.getRequestCommentModel().updateOrAddRequestResponse(requestResponse);
+                }
+                break;
             default:
                 this.sharedValues.getCallbacks().printOutput("Bad msg type");
         }
@@ -249,6 +266,12 @@ class BurpClient {
             sharedValues.getCallbacks().printOutput("sending message: " + burpTCMessage);
             cc.send(sharedValues.getCallbacks().getHelpers().base64Encode(sharedValues.getGson().toJson(burpTCMessage)));
         }
+    }
+
+    void sendCommentMessage(HttpRequestResponse requestResponseWithComments) {
+        BurpTCMessage muteMessage = new BurpTCMessage(requestResponseWithComments,
+                MessageType.COMMENT_MESSAGE, SharedValues.ROOM, Integer.toString(requestResponseWithComments.hashCode()));
+        this.sendMessage(muteMessage);
     }
 
     private SSLContext getSSLContextFromLetsEncrypt() {
@@ -349,4 +372,5 @@ class BurpClient {
     private void resetMutedClients() {
         mutedClients.clear();
     }
+
 }

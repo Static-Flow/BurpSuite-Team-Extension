@@ -13,5 +13,7 @@ public enum MessageType {
     LEAVE_ROOM_MESSAGE, //For leaving a room
     SYNC_SCOPE_MESSAGE, //For syncing scope between clients
     SCAN_ISSUE_MESSAGE, //For new scan issues
-    COOKIE_MESSAGE     //For new cookies
+    COOKIE_MESSAGE,     //For new cookies
+    COMMENT_MESSAGE,    //For sending new comments
+    GET_COMMENTS_MESSAGE, //For retrieving new comments
 }

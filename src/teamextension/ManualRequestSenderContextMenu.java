@@ -8,7 +8,6 @@ import burp.IRequestInfo;
 import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
-import java.net.URL;
 import java.util.List;
 import java.util.*;
 
@@ -147,12 +146,9 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     private Collection<? extends JMenuItem> creatCommentMenu(IContextMenuInvocation invocation) {
         JMenuItem menu = new JMenuItem("Comments");
         menu.addActionListener(e -> {
-            this.sharedValues.getCallbacks().printOutput(Integer.toString(invocation.getSelectedMessages().length));
-            IHttpRequestResponse message = invocation.getSelectedMessages()[0];
-            URL selectedRequestUrl =
-                    sharedValues.getCallbacks().getHelpers().analyzeRequest(message).getUrl();
+            HttpRequestResponse message = new HttpRequestResponse(invocation.getSelectedMessages()[0]);
             HttpRequestResponse requestResponseWithComments = sharedValues.getRequestCommentModel()
-                    .findRequestWithCommentsByUrl(selectedRequestUrl);
+                    .findRequestResponseWithComments(message);
             if (requestResponseWithComments != null)
                 displayCommentsFrame(requestResponseWithComments);
             else
@@ -164,8 +160,10 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     }
 
     private void displayCommentsFrame(HttpRequestResponse requestResponse) {
-        new CommentFrame(sharedValues.getCallbacks(), requestResponse,
-                sharedValues.getClient().getUsername());
+        if (sharedValues.getClient().isConnected() && sharedValues.getBurpPanel().inRoom()) {
+            new CommentFrame(sharedValues, requestResponse,
+                    sharedValues.getClient().getUsername());
+        }
     }
 
     private Collection<? extends JMenuItem> createSharingMenu(String topMenuName, IContextMenuInvocation invocation) {

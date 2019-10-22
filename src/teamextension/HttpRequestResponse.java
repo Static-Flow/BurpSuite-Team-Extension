@@ -15,7 +15,7 @@ public class HttpRequestResponse implements IHttpRequestResponse
     private String comment;
     private String highlight;
     private HttpService httpService;
-    private ArrayList<RequestComment> comments;
+    private List<RequestComment> comments;
 
     public HttpRequestResponse() {
     }
@@ -87,6 +87,7 @@ public class HttpRequestResponse implements IHttpRequestResponse
                 ", comment='" + comment + '\'' +
                 ", highlight='" + highlight + '\'' +
                 ", httpService=" + httpService +
+                ", comments=" + Arrays.toString(comments.toArray()) +
                 '}';
     }
 
@@ -98,7 +99,23 @@ public class HttpRequestResponse implements IHttpRequestResponse
         return this.comments;
     }
 
-    public boolean hasComments() {
-        return this.comments.isEmpty();
+    public void setComments(List<RequestComment> comments) {
+        this.comments = comments;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        HttpRequestResponse that = (HttpRequestResponse) o;
+        return Arrays.equals(request, that.request) &&
+                Arrays.equals(response, that.response);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Arrays.hashCode(request);
+        result = 31 * result + Arrays.hashCode(response);
+        return result;
     }
 }

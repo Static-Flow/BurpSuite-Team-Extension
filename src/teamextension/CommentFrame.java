@@ -1,6 +1,5 @@
 package teamextension;
 
-import burp.IBurpExtenderCallbacks;
 import burp.IMessageEditor;
 
 import javax.swing.*;
@@ -12,11 +11,11 @@ import java.util.List;
 class CommentFrame {
 
     private final HttpRequestResponse requestResponse;
-    private final IBurpExtenderCallbacks callbacks;
+    private SharedValues sharedValues;
     private final String userWhoInitiated;
 
-    CommentFrame(IBurpExtenderCallbacks callbacks, HttpRequestResponse requestResponse, String userWhoInitiated) {
-        this.callbacks = callbacks;
+    CommentFrame(SharedValues sharedValues, HttpRequestResponse requestResponse, String userWhoInitiated) {
+        this.sharedValues = sharedValues;
         this.requestResponse = requestResponse;
         this.userWhoInitiated = userWhoInitiated;
         init();
@@ -26,23 +25,27 @@ class CommentFrame {
         JFrame frame = new JFrame();
         JPanel topPane = new JPanel(new BorderLayout());
         JSplitPane splitter = new JSplitPane();
-        splitter.setDividerLocation(750);
+        splitter.setDividerLocation(450);
         splitter.setOrientation(JSplitPane.VERTICAL_SPLIT);
         JTabbedPane reqRespTabbedPane = new JTabbedPane();
-        IMessageEditor requestMessageToDisplay = callbacks.createMessageEditor(
+        IMessageEditor requestMessageToDisplay = sharedValues.getCallbacks().createMessageEditor(
                 new MessageEditorController(
                         requestResponse.getHttpService(),
                         requestResponse.getRequest(),
                         requestResponse.getResponse()),
                 false);
         requestMessageToDisplay.setMessage(requestResponse.getRequest(), true);
-        IMessageEditor responseMessageToDisplay = callbacks.createMessageEditor(
+        IMessageEditor responseMessageToDisplay = sharedValues.getCallbacks().createMessageEditor(
                 new MessageEditorController(
                         requestResponse.getHttpService(),
                         requestResponse.getRequest(),
                         requestResponse.getResponse()),
                 false);
-        responseMessageToDisplay.setMessage(requestResponse.getResponse(), true);
+        if (requestResponse.getResponse() != null) {
+            responseMessageToDisplay.setMessage(requestResponse.getResponse(), true);
+        } else {
+            responseMessageToDisplay.setMessage(new byte[]{}, false);
+        }
         reqRespTabbedPane.addTab("Request", requestMessageToDisplay.getComponent());
         reqRespTabbedPane.addTab("Response", responseMessageToDisplay.getComponent());
         splitter.setTopComponent(reqRespTabbedPane);
@@ -66,9 +69,9 @@ class CommentFrame {
                     if (e.isShiftDown()) {
                         commentArea.setText(commentArea.getText() + "\n");
                     } else {
-                        requestResponse.setHighlight("cyan");
                         RequestComment newComment = new RequestComment(commentArea.getText().trim(), userWhoInitiated);
-                        requestResponse.addComment(newComment);
+                        sharedValues.getRequestCommentModel().addCommentToNewOrExistingReqResp(newComment, requestResponse);
+                        sharedValues.getClient().sendCommentMessage(sharedValues.getRequestCommentModel().findRequestResponseWithComments(requestResponse));
                         commentArea.setText("");
                         commentsPanel.addComment(newComment);
                     }

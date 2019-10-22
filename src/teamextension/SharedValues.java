@@ -41,7 +41,7 @@ public class SharedValues {
         this.gson = builder.create();
         this.serverListModel = new ServerListModel();
         this.sharedLinksModel = new SharedLinksModel(this);
-        this.requestCommentModel = new RequestCommentModel(this.callbacks);
+        this.requestCommentModel = new RequestCommentModel(this);
         this.currentScope = getCallbacks().saveConfigAsJson("target.scope");
     }
 

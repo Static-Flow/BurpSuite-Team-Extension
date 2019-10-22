@@ -2,14 +2,19 @@ package teamextension;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.util.Base64;
 
 public class BurpTeamPanel
@@ -36,6 +41,9 @@ extends JPanel {
     private JCheckBox shareIssues;
     private JCheckBox receiveIssues;
     private JCheckBox shareCookies;
+    private JLabel chosenCertKeyLabel;
+    private JLabel chosenCertLabel;
+    private JTabbedPane optionsPane;
 
     public BurpTeamPanel(SharedValues sharedValues) {
         this.sharedValues = sharedValues;
@@ -45,6 +53,13 @@ extends JPanel {
         this.theirAddress.setText(this.sharedValues.getCallbacks().loadExtensionSetting("servername"));
         this.theirPort.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverport"));
         this.serverPassword.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverpass"));
+        if (this.sharedValues.getCallbacks().loadExtensionSetting("certificatePath") != null) {
+            this.sharedValues.setCertFile(new File(this.sharedValues.getCallbacks().loadExtensionSetting("certificatePath")));
+            this.chosenCertLabel.setText("Cert Set");
+            this.sharedValues.setCertKeyFile(new File(this.sharedValues.getCallbacks().loadExtensionSetting("certificateKeyPath")));
+            this.chosenCertKeyLabel.setText("Key Set");
+            this.startButton.setEnabled(true);
+        }
     }
 
     private void startButtonActionPerformed() {
@@ -92,12 +107,15 @@ extends JPanel {
             case -4:
                 writeToAlertPane("Failed to connect to server: invalid certificate or key.");
                 break;
+            case -5:
+                writeToAlertPane("Failed to connect to server: connection refused. Is the port and host correct?");
+                break;
             case -1:
                 writeToAlertPane("Failed to connect to server: Unknown " +
                         "error");
                 break;
             case 1:
-                writeToAlertPane("Failed to connect to server: Server crash");
+                writeToAlertPane("Server crash");
                 break;
             default:
                 writeToAlertPane("Failed to connect to server: We " +
@@ -111,6 +129,25 @@ extends JPanel {
             statusText.getDocument().insertString(0, message + "\n", null);
         } catch (BadLocationException e) {
             this.sharedValues.getCallbacks().printError(e.getMessage());
+        }
+    }
+
+    private void readyToConnect() {
+        if (this.startButton.getText().equals("Connect")) {
+            this.startButton.setEnabled(false);
+            if (this.chosenCertLabel.getText().length() == 0) {
+                this.startButton.setToolTipText("make sure to import a server certificate");
+            } else if (this.chosenCertKeyLabel.getText().length() == 0) {
+                this.startButton.setToolTipText("make sure to import a server certificate key");
+            } else if (this.yourName.getText().length() == 0) {
+                this.startButton.setToolTipText("make sure to enter a name");
+            } else if (this.theirAddress.getText().length() == 0) {
+                this.startButton.setToolTipText("make sure to enter a server address");
+            } else if (this.theirPort.getText().length() == 0) {
+                this.startButton.setToolTipText("make sure to enter a server port");
+            } else {
+                this.startButton.setEnabled(true);
+            }
         }
     }
 
@@ -132,6 +169,10 @@ extends JPanel {
         getScopeButton.setEnabled(false);
     }
 
+    JTabbedPane getOptionsPane() {
+        return optionsPane;
+    }
+
     private void initComponents() {
         GridBagLayout gridBagLayout = new GridBagLayout();
         gridBagLayout.columnWidths = new int[]{432, 435, 0};
@@ -142,6 +183,49 @@ extends JPanel {
 
         //info panel
         JPanel infoPanel = new JPanel();
+        infoPanel.addAncestorListener(new AncestorListener() {
+            @Override
+            public void ancestorAdded(AncestorEvent event) {
+                new SwingWorker<Boolean, Void>() {
+                    @Override
+                    public Boolean doInBackground() {
+                        JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
+                        JTabbedPane optionsPane = getOptionsPane();
+                        if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
+                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
+                        } else {
+                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
+                        }
+                        Timer timer = new Timer(3000, e -> {
+                            if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
+                                optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), new Color(0x3C3F41));
+                            } else {
+                                optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), Color.WHITE);
+                            }
+
+                        });
+                        timer.setRepeats(false);
+                        timer.start();
+                        return Boolean.TRUE;
+                    }
+
+                    @Override
+                    public void done() {
+                        //we don't need to do any cleanup so this is empty
+                    }
+                }.execute();
+            }
+
+            @Override
+            public void ancestorRemoved(AncestorEvent event) {
+
+            }
+
+            @Override
+            public void ancestorMoved(AncestorEvent event) {
+
+            }
+        });
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
         gridBagConstraints.fill = GridBagConstraints.BOTH;
         gridBagConstraints.insets = new Insets(0, 0, 5, 5);
@@ -180,16 +264,49 @@ extends JPanel {
         connectionPanel.add(yourNameLabel);
         yourNameLabel.setText("Display Name:");
         this.yourName = new JTextField();
+        this.yourName.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                readyToConnect();
+            }
+
+            @Override
+            public void focusGained(FocusEvent e) {
+                readyToConnect();
+            }
+        });
         connectionPanel.add(yourName);
         JLabel theirListenAddress = new JLabel();
         connectionPanel.add(theirListenAddress);
         theirListenAddress.setText("Server Address:");
         this.theirAddress = new JTextField();
+        this.theirAddress.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                readyToConnect();
+            }
+
+            @Override
+            public void focusGained(FocusEvent e) {
+                readyToConnect();
+            }
+        });
         connectionPanel.add(theirAddress);
         JLabel theirListenPort = new JLabel();
         connectionPanel.add(theirListenPort);
         theirListenPort.setText("Server Port:");
         this.theirPort = new JTextField();
+        this.theirPort.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                readyToConnect();
+            }
+
+            @Override
+            public void focusGained(FocusEvent e) {
+                readyToConnect();
+            }
+        });
         connectionPanel.add(theirPort);
         JLabel serverPasswordLabel = new JLabel();
         serverPasswordLabel.setText("Server Password:");
@@ -197,6 +314,7 @@ extends JPanel {
         this.serverPassword = new JTextField();
         connectionPanel.add(this.serverPassword);
         this.startButton = new JButton();
+        this.startButton.setEnabled(false);
         connectionPanel.add(startButton);
         this.startButton.setText("Connect");
         this.newRoom = new JButton("New Room");
@@ -232,6 +350,8 @@ extends JPanel {
             this.sharedValues.getCallbacks().saveExtensionSetting("servername", this.theirAddress.getText());
             this.sharedValues.getCallbacks().saveExtensionSetting("serverport", this.theirPort.getText());
             this.sharedValues.getCallbacks().saveExtensionSetting("serverpass", this.serverPassword.getText());
+            this.sharedValues.getCallbacks().saveExtensionSetting("certificatePath", sharedValues.getCertFile().getAbsolutePath());
+            this.sharedValues.getCallbacks().saveExtensionSetting("certificateKeyPath", sharedValues.getCertKeyFile().getAbsolutePath());
         });
         connectionPanel.add(this.saveConfigButton);
         //end connection panel
@@ -303,7 +423,7 @@ extends JPanel {
         //end rooms/members panel
 
         //bottom Tab Pane
-        JTabbedPane optionsPane = new JTabbedPane();
+        optionsPane = new JTabbedPane();
         GridBagConstraints optionsPanelConstraints = new GridBagConstraints();
         optionsPanelConstraints.fill = GridBagConstraints.BOTH;
         optionsPanelConstraints.gridwidth = 2;
@@ -372,18 +492,17 @@ extends JPanel {
         optionsPanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
 
         final JFileChooser certFileChooser = new JFileChooser();
-        JLabel chosenCertLabel = new JLabel();
+        chosenCertLabel = new JLabel();
         chosenCertLabel.setHorizontalAlignment(SwingConstants.CENTER);
         JButton chooseCertFile = new JButton("Select Certificate");
         chooseCertFile.setHorizontalAlignment(SwingConstants.CENTER);
         chooseCertFile.addActionListener(e -> {
             int returnVal =
                     certFileChooser.showOpenDialog(BurpTeamPanel.this);
-
             if (returnVal == JFileChooser.APPROVE_OPTION) {
                 sharedValues.setCertFile(certFileChooser.getSelectedFile());
                 chosenCertLabel.setText(certFileChooser.getSelectedFile().getName());
-                //This is where a real application would open the file.
+                readyToConnect();
             } else {
                 sharedValues.getCallbacks().printOutput("Open command " +
                         "cancelled by user.");
@@ -393,18 +512,17 @@ extends JPanel {
         optionsPanel.add(chosenCertLabel);
 
         final JFileChooser keyFileChooser = new JFileChooser();
-        JLabel chosenCertKeyLabel = new JLabel();
+        chosenCertKeyLabel = new JLabel();
         chosenCertKeyLabel.setHorizontalAlignment(SwingConstants.CENTER);
         JButton chooseCertKey = new JButton("Select Certificate Key");
         chooseCertKey.setHorizontalAlignment(SwingConstants.CENTER);
         chooseCertKey.addActionListener(e -> {
             int returnVal =
                     keyFileChooser.showOpenDialog(BurpTeamPanel.this);
-
             if (returnVal == JFileChooser.APPROVE_OPTION) {
                 sharedValues.setCertKeyFile(keyFileChooser.getSelectedFile());
                 chosenCertKeyLabel.setText(keyFileChooser.getSelectedFile().getName());
-                //This is where a real application would open the file.
+                readyToConnect();
             } else {
                 sharedValues.getCallbacks().printOutput("Open command " +
                         "cancelled by user.");
@@ -441,8 +559,53 @@ extends JPanel {
         //end options panel
 
         //comments panel
-        JPanel commentsPanel = new JPanel();
-        optionsPane.addTab("Comments", commentsPanel);
+        JList<HttpRequestResponse> commentsList = new JList<>();
+        commentsList.setModel(sharedValues.getRequestCommentModel());
+        commentsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        commentsList.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent evt) {
+                JList list = (JList) evt.getSource();
+                if (evt.getClickCount() == 2) {
+                    int index = list.locationToIndex(evt.getPoint());
+                    new CommentFrame(sharedValues, ((RequestCommentModel) commentsList.getModel()).getTrueElementAt(index),
+                            sharedValues.getClient().getUsername());
+                }
+            }
+        });
+        JScrollPane commentsScrollPane = new JScrollPane(commentsList);
+        commentsScrollPane.addAncestorListener(new AncestorListener() {
+            @Override
+            public void ancestorAdded(AncestorEvent event) {
+                new SwingWorker<Boolean, Void>() {
+                    @Override
+                    public Boolean doInBackground() {
+                        JTabbedPane optionsPane = getOptionsPane();
+                        if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
+                            optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
+                        } else {
+                            optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), Color.black);
+                        }
+                        return Boolean.TRUE;
+                    }
+
+                    @Override
+                    public void done() {
+                        //we don't need to do any cleanup so this is empty
+                    }
+                }.execute();
+            }
+
+            @Override
+            public void ancestorRemoved(AncestorEvent event) {
+
+            }
+
+            @Override
+            public void ancestorMoved(AncestorEvent event) {
+
+            }
+        });
+        optionsPane.addTab("Comments", commentsScrollPane);
         //end comments panel
 
     }
