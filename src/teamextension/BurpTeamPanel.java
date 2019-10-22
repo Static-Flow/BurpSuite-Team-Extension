@@ -146,6 +146,7 @@ extends JPanel {
             } else if (this.theirPort.getText().length() == 0) {
                 this.startButton.setToolTipText("make sure to enter a server port");
             } else {
+                this.startButton.setToolTipText("");
                 this.startButton.setEnabled(true);
             }
         }

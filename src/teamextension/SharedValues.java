@@ -12,6 +12,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class SharedValues {
@@ -38,7 +39,9 @@ public class SharedValues {
         this.callbacks = iBurpExtenderCallbacks;
         this.currentCookieJar = this.callbacks.getCookieJarContents();
         GsonBuilder builder = new GsonBuilder();
-        this.gson = builder.create();
+        builder.registerTypeAdapter(Date.class, new DateDeserializer(callbacks));
+        this.gson =
+                builder.setDateFormat("MMM dd HH:mm:ss").create();
         this.serverListModel = new ServerListModel();
         this.sharedLinksModel = new SharedLinksModel(this);
         this.requestCommentModel = new RequestCommentModel(this);

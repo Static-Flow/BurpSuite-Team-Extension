@@ -12,10 +12,7 @@ class Cookie implements ICookie {
     private String name;
     private String value;
 
-    public Cookie() {
-    }
-
-    public Cookie(ICookie copyCookie) {
+    Cookie(ICookie copyCookie) {
         domain = copyCookie.getDomain();
         path = copyCookie.getPath();
         expiration = copyCookie.getExpiration();

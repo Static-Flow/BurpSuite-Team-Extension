@@ -8,9 +8,11 @@ class RequestCommentModel extends AbstractListModel {
 
     private ArrayList<HttpRequestResponse> requestResponsesWithComments;
     private SharedValues sharedValues;
+    private ArrayList<CommentFrame> openCommentSessions;
 
     RequestCommentModel(SharedValues sharedValues) {
         requestResponsesWithComments = new ArrayList<>();
+        openCommentSessions = new ArrayList<>();
         this.sharedValues = sharedValues;
     }
 
@@ -28,6 +30,7 @@ class RequestCommentModel extends AbstractListModel {
 
     private void contentChanged(int index) {
         fireContentsChanged(this, index, index);
+        updateCommentSessions(this.requestResponsesWithComments.get(index));
         new SwingWorker<Boolean, Void>() {
             @Override
             public Boolean doInBackground() {
@@ -49,6 +52,14 @@ class RequestCommentModel extends AbstractListModel {
                 //we don't need to do any cleanup so this is empty
             }
         }.execute();
+    }
+
+    private void updateCommentSessions(HttpRequestResponse httpRequestResponse) {
+        for (CommentFrame commentSession : this.openCommentSessions) {
+            if (commentSession.getRequestResponse().equals(httpRequestResponse)) {
+                commentSession.setRequestResponse(httpRequestResponse);
+            }
+        }
     }
 
     HttpRequestResponse findRequestResponseWithComments(HttpRequestResponse possibleRequestResponse) {
@@ -88,5 +99,13 @@ class RequestCommentModel extends AbstractListModel {
             contentChanged(this.requestResponsesWithComments.size() - 1);
         }
 
+    }
+
+    void removeCommentSession(CommentFrame commentSession) {
+        this.openCommentSessions.remove(commentSession);
+    }
+
+    public void addCommentSession(CommentFrame commentFrame) {
+        this.openCommentSessions.add(commentFrame);
     }
 }

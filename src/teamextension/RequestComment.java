@@ -24,7 +24,7 @@ public class RequestComment {
 
     String getTimeOfComment() {
 
-        SimpleDateFormat format = new SimpleDateFormat("MM-dd HH:mm:ss");
+        SimpleDateFormat format = new SimpleDateFormat("MMM dd HH:mm:ss");
         return format.format(this.timeOfComment);
     }
 

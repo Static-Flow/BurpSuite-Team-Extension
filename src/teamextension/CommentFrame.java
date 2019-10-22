@@ -10,19 +10,35 @@ import java.util.List;
 
 class CommentFrame {
 
-    private final HttpRequestResponse requestResponse;
+    private HttpRequestResponse requestResponse;
     private SharedValues sharedValues;
     private final String userWhoInitiated;
+    private CommentsPanel commentsPanel;
 
     CommentFrame(SharedValues sharedValues, HttpRequestResponse requestResponse, String userWhoInitiated) {
         this.sharedValues = sharedValues;
         this.requestResponse = requestResponse;
         this.userWhoInitiated = userWhoInitiated;
-        init();
+        commentsPanel = init(this);
     }
 
-    private void init() {
+    public void setRequestResponse(HttpRequestResponse requestResponse) {
+        this.requestResponse = requestResponse;
+        this.commentsPanel.layoutComments(requestResponse.getComments());
+    }
+
+    public HttpRequestResponse getRequestResponse() {
+        return requestResponse;
+    }
+
+    private CommentsPanel init(CommentFrame commentFrame) {
         JFrame frame = new JFrame();
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                sharedValues.getRequestCommentModel().removeCommentSession(commentFrame);
+            }
+        });
         JPanel topPane = new JPanel(new BorderLayout());
         JSplitPane splitter = new JSplitPane();
         splitter.setDividerLocation(450);
@@ -71,6 +87,7 @@ class CommentFrame {
                     } else {
                         RequestComment newComment = new RequestComment(commentArea.getText().trim(), userWhoInitiated);
                         sharedValues.getRequestCommentModel().addCommentToNewOrExistingReqResp(newComment, requestResponse);
+                        sharedValues.getRequestCommentModel().addCommentSession(commentFrame);
                         sharedValues.getClient().sendCommentMessage(sharedValues.getRequestCommentModel().findRequestResponseWithComments(requestResponse));
                         commentArea.setText("");
                         commentsPanel.addComment(newComment);
@@ -85,7 +102,7 @@ class CommentFrame {
         frame.setSize(400, 750);
         frame.pack();
         frame.setVisible(true);
-
+        return commentsPanel;
     }
 }
 
@@ -95,7 +112,7 @@ class CommentsPanel extends JScrollPane {
     private GridBagConstraints c;
 
     CommentsPanel() {
-        setPreferredSize(new Dimension(400, 700));
+        setSize(new Dimension(400, 300));
         topPane = new JPanel(new GridBagLayout());
         topPane.setBackground(Color.blue);
         c = new GridBagConstraints();
@@ -127,6 +144,7 @@ class CommentsPanel extends JScrollPane {
     }
 
     void layoutComments(List<RequestComment> comments) {
+        topPane.removeAll();
         for (RequestComment comment : comments) {
             topPane.add(new CommentPanel(comment), c, topPane.getComponentCount() - 1);
         }

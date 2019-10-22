@@ -2,6 +2,7 @@ package teamextension;
 
 import burp.ICookie;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.framing.CloseFrame;
@@ -11,6 +12,7 @@ import javax.net.ssl.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.lang.reflect.Type;
 import java.net.ConnectException;
 import java.net.URI;
@@ -34,7 +36,6 @@ class BurpClient {
     private final String username;
     private WebSocketClient cc;
     private SharedValues sharedValues;
-    private Gson gson;
     private ArrayList<String> mutedClients;
     private String currentRoom = SERVER;
     private boolean paused;
@@ -46,7 +47,6 @@ class BurpClient {
         this.username = username;
         mutedClients = new ArrayList<>();
         this.paused = false;
-        this.gson = new Gson();
         this.sharedValues = sharedValues;
         HashMap<String, String> authHeaders = new HashMap<>();
         authHeaders.put("Auth", serverPassword);
@@ -58,11 +58,11 @@ class BurpClient {
             public void onMessage(String message) {
                 try {
                     BurpTCMessage burpTCMessage =
-                            gson.fromJson(new String(sharedValues.getCallbacks().getHelpers().base64Decode(message)),
+                            sharedValues.getGson().fromJson(new String(sharedValues.getCallbacks().getHelpers().base64Decode(message)),
                                     BurpTCMessage.class);
                     parseBurpTCMessage(burpTCMessage);
-                } catch (Exception e) {
-                    sharedValues.getCallbacks().printError("bad message");
+                } catch (JsonSyntaxException e) {
+                    e.printStackTrace(new PrintStream(sharedValues.getCallbacks().getStderr()));
                 }
 
             }
