@@ -446,16 +446,19 @@ extends JPanel {
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isRightMouseButton(e)) {
                     if (!allMuted) {
-                        sharedValues.getCallbacks().printOutput(roomMemberList.getSelectedValue());
-                        sharedValues.getCallbacks().printOutput(Boolean.toString(sharedValues.getClient().getMutedClients().contains(roomMemberList.getSelectedValue())));
-                        if (sharedValues.getClient().getMutedClients().contains(roomMemberList.getSelectedValue())) {
-                            muteClient.setEnabled(false);
-                            unmuteClient.setEnabled(true);
-                        } else {
-                            muteClient.setEnabled(true);
-                            unmuteClient.setEnabled(false);
+                        if (!roomMemberList.getModel().getElementAt(roomMemberList.locationToIndex(e.getPoint())).equals(yourName.getText())) {
+                            roomMemberList.setSelectedIndex(roomMemberList.locationToIndex(e.getPoint()));
+                            sharedValues.getCallbacks().printOutput(roomMemberList.getSelectedValue());
+                            sharedValues.getCallbacks().printOutput(Boolean.toString(sharedValues.getClient().getMutedClients().contains(roomMemberList.getSelectedValue())));
+                            if (sharedValues.getClient().getMutedClients().contains(roomMemberList.getSelectedValue())) {
+                                muteClient.setEnabled(false);
+                                unmuteClient.setEnabled(true);
+                            } else {
+                                muteClient.setEnabled(true);
+                                unmuteClient.setEnabled(false);
+                            }
+                            clientMenu.show(roomMemberList, e.getPoint().x, e.getPoint().y);
                         }
-                        clientMenu.show(roomMemberList, e.getPoint().x, e.getPoint().y);
                     }
                 }
             }
