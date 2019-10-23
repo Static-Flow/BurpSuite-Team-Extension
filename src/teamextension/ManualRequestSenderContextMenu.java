@@ -3,7 +3,6 @@ package teamextension;
 import burp.IContextMenuFactory;
 import burp.IContextMenuInvocation;
 import burp.IHttpRequestResponse;
-import burp.IRequestInfo;
 
 import javax.swing.Timer;
 import javax.swing.*;
@@ -24,8 +23,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     private void sendSelectedRequests(IContextMenuInvocation invocation,
                                       byte sendingContext,
                                       String sendingContextArgument) {
-        HttpRequestResponse httpRequestResponse =
-                new HttpRequestResponse();
+        HttpRequestResponse httpRequestResponse;
         if (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_INTRUDER_PAYLOAD_POSITIONS) { //intruder
             this.sharedValues.getCallbacks().printOutput(Arrays.toString(invocation.getSelectionBounds()));
             httpRequestResponse = new HttpRequestResponse(invocation.getSelectedMessages()[0]);
@@ -35,65 +33,38 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                     sendingContextArgument, null);
             sharedValues.getClient().sendMessage(intruderMessage);
         } else if (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST) { //repeater
-            IHttpRequestResponse requestResponse =
-                    invocation.getSelectedMessages()[0];
-            createHttpRequestResponse(httpRequestResponse, requestResponse);
+            httpRequestResponse = new HttpRequestResponse(invocation.getSelectedMessages()[0]);
             BurpTCMessage repeaterMessage = new BurpTCMessage(
                     httpRequestResponse, MessageType.REPEATER_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
                     SharedValues.ROOM :
                     sendingContextArgument, null);
             sharedValues.getClient().sendMessage(repeaterMessage);
         } else {                                                                                                //sending generics
-            HttpRequestResponse finalHttpRequestResponse = httpRequestResponse;
-            new SwingWorker<Boolean, Void>() {
-                @Override
-                public Boolean doInBackground() {
-                    for (IHttpRequestResponse reqResp : invocation.getSelectedMessages()) {
-                        if (reqResp.getResponse() != null) {
-                            sendMessage(reqResp);
-                        } else {
-                            IRequestInfo req = sharedValues.getCallbacks().getHelpers()
-                                    .analyzeRequest(reqResp.getHttpService(),
-                                            reqResp.getRequest());
-                            IHttpRequestResponse[] requests = sharedValues.getCallbacks().getSiteMap(
-                                    req.getUrl().getProtocol() + "://" +
-                                            req.getUrl().getHost() + req.getUrl()
-                                            .getPath());
-                            for (IHttpRequestResponse reqRep : requests) {
-                                sendMessage(reqRep);
-                            }
+            for (IHttpRequestResponse reqResp : invocation.getSelectedMessages()) {
+                httpRequestResponse = new HttpRequestResponse(reqResp);
+                this.sharedValues.getCallbacks().printOutput(httpRequestResponse.toString());
+                if (reqResp.getResponse() != null) {
+                    //is bottom level request
+                    BurpTCMessage burpTCMessage = new BurpTCMessage(
+                            httpRequestResponse, MessageType.BURP_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
+                            SharedValues.ROOM : sendingContextArgument, null);
+                    sharedValues.getClient().sendMessage(burpTCMessage);
+                } else {
+                    for (IHttpRequestResponse iHttpRequestResponse : sharedValues.getCallbacks().getSiteMap(
+                            reqResp.getHttpService().getProtocol() + "://" + reqResp.getHttpService().getHost())) {
+                        if (iHttpRequestResponse.getResponse() != null) {
+                            BurpTCMessage burpTCMessage = new BurpTCMessage(
+                                    new HttpRequestResponse(iHttpRequestResponse), MessageType.BURP_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
+                                    SharedValues.ROOM : sendingContextArgument, null);
+                            sharedValues.getClient().sendMessage(burpTCMessage);
                         }
                     }
-                    return Boolean.TRUE;
                 }
-
-                private void sendMessage(IHttpRequestResponse reqResp) {
-                    finalHttpRequestResponse.setRequest(reqResp.getRequest());
-                    finalHttpRequestResponse.setResponse(reqResp.getResponse());
-                    finalHttpRequestResponse.setHttpService(reqResp.getHttpService());
-                    sharedValues.getCallbacks().printOutput(finalHttpRequestResponse.getHttpService().getHost());
-                    BurpTCMessage burpTCMessage = new BurpTCMessage(
-                            finalHttpRequestResponse, MessageType.BURP_MESSAGE,
-                            sendingContext == CONTEXT_SEND_TO_GROUP ?
-                                    SharedValues.ROOM :
-                                    sendingContextArgument,
-                            null);
-                    sharedValues.getClient().sendMessage(burpTCMessage);
-                }
-
-                @Override
-                public void done() {
-                    //we don't need to do any cleanup so this is empty
-                }
-            }.execute();
+            }
         }
+
     }
 
-    private void createHttpRequestResponse(HttpRequestResponse httpRequestResponse, IHttpRequestResponse requestResponse) {
-        httpRequestResponse.setRequest(requestResponse.getRequest());
-        httpRequestResponse.setResponse(requestResponse.getResponse());
-        httpRequestResponse.setHttpService(requestResponse.getHttpService());
-    }
 
     private Collection<? extends JMenuItem> createLinkMenu(IContextMenuInvocation invocation) {
         JMenuItem click = new JMenuItem("create link");

@@ -22,7 +22,7 @@ public class ProxyListener implements IProxyListener {
             sharedValues.getCallbacks().issueAlert("This host created a custom repeater payload. If you did not paste this yourself " +
                     "or clicked on a link you should leave that site.");
             iInterceptedProxyMessage.getMessageInfo().setHttpService(this.sharedValues.getCallbacks().getHelpers().buildHttpService(
-                    "127.0.0.1", 8888, httpService.getProtocol()));
+                    "127.0.0.1", this.sharedValues.getInnerServer().getSocket().getLocalPort(), httpService.getProtocol()));
         } else if (!isResponse && this.sharedValues.getClient().isConnected() && this.sharedValues.getBurpPanel().inRoom()) {
             if (this.sharedValues.getBurpPanel().getShareAllRequestsSetting()) {
                 HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
