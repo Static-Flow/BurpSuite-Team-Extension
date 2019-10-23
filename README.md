@@ -1,12 +1,18 @@
 # BurpSuite-Team-Extension
 
-This Burpsuite plugin allows for multiple testers to share live/historical proxy requests, scope and reapeater/intruder payloads with each other in real time allowing for truely collaborative web app testing. When connected to the Team Sever and in a Team Room all requests coming through your Burp client are shared with the other testers in the room and vice-versa!
+This Burpsuite plugin allows for multiple testers to share live/historical proxy requests, scope and repeater/intruder payloads with each other in real time allowing for truly collaborative web app testing. When connected to the Team Sever and in a Team Room all requests coming through your Burp client are shared with the other testers in the room and vice-versa!
+
+## Request from clients to target propegated to other clients
+![Image of Request being made](https://github.com/Static-Flow/BurpSuite-Team-Extension/blob/master/images/request.png)
+
+## Response from target to clients propegated to other clients
+![Image of Request being made](https://github.com/Static-Flow/BurpSuite-Team-Extension/blob/master/images/response.png)
 
 # Features
 
  + Real time request/response pairs shared between all clients
  
- + AES Encryption of all traffic between client and server
+ + Mutual TLS Encryption of all traffic between client and server
  
  + Seperate Team Rooms to allow multiple teams on 1 server
  
@@ -20,7 +26,21 @@ This Burpsuite plugin allows for multiple testers to share live/historical proxy
  
  + Share specific request/response pairs with individual team members or whole room 
 
- + More to come!
+ + Generate shareable links to Burp Suite Requests that can be shared outside of Burp Suite
+ 
+ + Add comments to Burp Suite requests that are v iewable by other teammates
+ 
+ + Automatic sharing of discovered Cookies
+ 
+ + Automatic sharing of discovered Passive/Active scan findings
+ 
+ + Configure sharing of all requests or just in scope ones
+ 
+ + Configure sharing/receiving Cookies
+ 
+ + Configure sharing/receiving Issues
+ 
+ + Save connection settings
  
 # How it works
 
@@ -30,15 +50,20 @@ There are two parts that make this collaborative web app testing possible. 1st i
 
 ```
 go get github.com/Static-Flow/BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
-cd ~/go/src/github.com/Static-Flow/BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
-go build BurpSuiteTeamServer.go
-./BurpSuiteTeamServer
+cd ~/go/src/github.com/Static-Flow/BurpSuiteTeamServer/
+go get ./...
+go install ./...
+~/go/bin/BurpSuiteTeamServer -h
 ```
 Output:
 ```
-This is the server key that clients need to login: <Server key>
-Starting chat room server
-Awaiting Clients...
+Usage of BurpSuiteTeamServer:
+  -host string
+    	host for TLS cert. Defaults to localhost (default "localhost")
+  -port string
+    	http service address (default "9999")
+  -serverPassword string
+    	password for the server
 ```
 
 # How to install the Burpsuite plugin
@@ -55,8 +80,11 @@ The jar file is prebuilt for you within the build/jar folder. To use the prebuil
   
   #### Connect to server
   1. Navigate to the "Burp TC" tab
-  2. Enter a chosen username, the server IP address, port and password
-  3. Click the "Connect" button
+  2. Enter a chosen username, the server IP address, port and server password (if required)
+  3. Navigate to the "Configuration" tab within the "Burp TC" tab
+  4. Using the "Select Certificate" file selection button, pick the server certificate generated when the server started
+  5. Using the "Select Certificate Key" file selection button, pick the server certificate key generated when the server started
+  6. Click the "Connect" button
 
   #### Disconnect from server
   1. Click the "Disconnect" button
@@ -64,11 +92,13 @@ The jar file is prebuilt for you within the build/jar folder. To use the prebuil
   #### Create a new room
   1. Click the "New Room" button
   2. Enter a room name
-  3. Click "Ok"
+  3. If desired, enter a room password
+  4. Click "Ok"
 
   #### Join a room
-  1. The bottom right panel will show current server rooms or "No rooms currently" if none exist
+  1. The middle right panel will show current server rooms or "No rooms currently" if none exist
   2. Right click on the desired room and click "Join"
+  3. If a password is required a prompt will show, enter the room password
   
  ## Room Actions
   These actions can be taken by a client that has connected to a server and joined a room
@@ -83,15 +113,18 @@ The jar file is prebuilt for you within the build/jar folder. To use the prebuil
   1. Click the "Unpause" button
 
   #### Mute individual team member
-  1. The bottom right panel will show current room members
+  1. The middle right panel will show current room members
   2. Right click on the desired room and click "Mute"
   
   #### Unmute individual team member
-  1. The bottom right panel will show current room members
+  1. The middle right panel will show current room members
   2. Right click on the desired room and click "Unmute"
  
   #### Mute all team members
   1. Click the "Mute All" button
+  
+  #### Unmute all team members
+  1. Click the "Unmute All" button
   
   #### Set room scope
   (This can only be done by the client that starts the room)
@@ -100,6 +133,7 @@ The jar file is prebuilt for you within the build/jar folder. To use the prebuil
   
   #### Get room scope
   2. Click the "Get Room Scope" button
+  
  ## Tool Actions
   These actions apply to Burpsuite tools outside of the "Burp TC" tab
   
@@ -133,3 +167,58 @@ The jar file is prebuilt for you within the build/jar folder. To use the prebuil
   2. Within the "Site map" tab right click on the entry you would like to share and mouse over "Share Request"
   3. Mouse over "To Teammate"
   4. Select the name of the desired team member
+
+## Custom Actions
+  #### Generate shareable links as a URL
+  1. Right click inside a repeater tab and select "create link"
+  2. Navigate to the "Shared Links" tab within the "Burp TC" extension tab
+  3. Right click on the link you would like to share and select "Get link"
+  
+  #### Generate shareable links as a HTML link
+  1. Right click inside a repeater tab and select "create Link"
+  2. Navigate to the "Shared Links" tab within the "Burp TC" extension tab
+  3. Right click on the link you would like to share and select "Get HTML Link"
+  
+  #### Remove generated link
+  1. Right click inside a repeater tab and select "create link"
+  2. Navigate to the "Shared Links" tab within the "Burp TC" extension tab
+  3. Right click on the link you would like to share and select "Remove link"
+  
+  #### Start commenting on request
+  1. Right click on a Proxy history line or a request inside the Site Map
+  2. Select "Comments"
+  3. The comment UI will appear, enter your comment in the bottom textfield and hit enter
+  
+  #### View comments on request
+  1. Navigate to the "Comments" tab within the "Burp TC" extension tab
+  2. Double click on any threads listed in the list of comments to open the Comment UI and begin commenting
+  
+  #### Set server certificate
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Click the "Select Cetificate" button
+  3. Using the file picker, select the "BurpServer.pem" file generated by the server
+  
+  #### Set server certificate key
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Click the "Select Cetificate Key" button
+  3. Using the file picker, select the "BurpServer.key" file generated by the server
+  
+  #### Configure sharing only in-scope requests
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Uncheck the "Share all requests" check-box
+  
+  #### Configure sending discovered issues
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Uncheck the "Share issues" check-box
+  
+  #### Configure sending discovered cookies
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Uncheck the "Share cookies" check-box
+  
+  #### Configure receiving discovered issues
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Uncheck the "Receive shared issues" check-box
+  
+  #### Configure receiving discovered cookies
+  1. Navigate to the "Configuration" tab within the "Burp TC" extension tab
+  2. Uncheck the "Receive shared cookies" check-box
