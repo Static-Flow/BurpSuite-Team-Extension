@@ -13,6 +13,7 @@ implements IExtensionStateListener {
     }
 
     public void extensionUnloaded() {
+        this.sharedValues.closeCommentSessions();
         this.sharedValues.setCustomServerRunning(false);
         this.sharedValues.getBurpPanel().swapServerAndRoomLists(false);
         try {

@@ -65,27 +65,40 @@ extends JPanel {
     }
 
     private void startButtonActionPerformed() {
-        if (this.sharedValues.getClient() == null || !this.sharedValues.getClient().isConnected()) {
-            // if we are not connected, connect
-            if (this.sharedValues.connectToServer(
-                    theirAddress.getText() + ":" + theirPort.getText(),
-                    serverPassword.getText(),
-                    yourName.getText())) {
-                // if we connect successfully
-                saveConfigButton.setEnabled(true);
-                startButton.setText("Disconnect");
-                newRoom.setEnabled(true);
-            }
-        } else {
-            // if we are connected, leave
-            if (sharedValues.getClient().isConnected()) {
-                if (inRoom()) {
-                    this.sharedValues.getClient().leaveRoom();
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                if (sharedValues.getClient() == null || !sharedValues.getClient().isConnected()) {
+                    // if we are not connected, connect
+                    if (sharedValues.connectToServer(
+                            theirAddress.getText() + ":" + theirPort.getText(),
+                            serverPassword.getText(),
+                            yourName.getText())) {
+                        // if we connect successfully
+                        saveConfigButton.setEnabled(true);
+                        startButton.setText("Disconnect");
+                        newRoom.setEnabled(true);
+                    }
+                } else {
+                    // if we are connected, leave
+                    if (sharedValues.getClient().isConnected()) {
+                        if (inRoom()) {
+                            sharedValues.getClient().leaveRoom();
+                        }
+                        sharedValues.getClient().leaveServer();
+                    }
+                    resetConnectionUI();
+
+                    sharedValues.closeCommentSessions();
                 }
-                this.sharedValues.getClient().leaveServer();
+                return Boolean.TRUE;
             }
-            resetConnectionUI();
-        }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     void resetConnectionUIWithReason(int reason) {
@@ -127,11 +140,22 @@ extends JPanel {
     }
 
     void writeToAlertPane(String message) {
-        try {
-            statusText.getDocument().insertString(0, message + "\n", null);
-        } catch (BadLocationException e) {
-            this.sharedValues.getCallbacks().printError(e.getMessage());
-        }
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                try {
+                    statusText.getDocument().insertString(0, message + "\n", null);
+                } catch (BadLocationException e) {
+                    sharedValues.getCallbacks().printError(e.getMessage());
+                }
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
 
@@ -444,9 +468,7 @@ extends JPanel {
                 if (SwingUtilities.isRightMouseButton(e)) {
                     if (serverList.getModel().getSize() > 0) {
                         serverList.setSelectedIndex(serverList.locationToIndex(e.getPoint()));
-                        if (!yourName.getText().equals(serverList.getSelectedValue())) {
-                            roomMenu.show(serverList, e.getPoint().x, e.getPoint().y);
-                        }
+                        roomMenu.show(serverList, e.getPoint().x, e.getPoint().y);
                     }
                 }
             }
@@ -604,8 +626,10 @@ extends JPanel {
                 JList list = (JList) evt.getSource();
                 if (evt.getClickCount() == 2) {
                     int index = list.locationToIndex(evt.getPoint());
-                    new CommentFrame(sharedValues, ((RequestCommentModel) commentsList.getModel()).getTrueElementAt(index),
+                    CommentFrame commentSession = new CommentFrame(sharedValues,
+                            ((RequestCommentModel) commentsList.getModel()).getTrueElementAt(index),
                             sharedValues.getClient().getUsername());
+                    sharedValues.getRequestCommentModel().addCommentSession(commentSession);
                 }
             }
         });
@@ -719,83 +743,106 @@ extends JPanel {
     }
 
     private void leaveRoomButtonActionPerformed() {
-        this.swapServerAndRoomLists(false);
-        this.allMuted = false;
-        this.newRoom.setEnabled(true);
-        this.muteAllButton.setEnabled(false);
-        this.setScopeButton.setEnabled(false);
-        this.leaveRoom.setEnabled(false);
-        this.pauseButton.setEnabled(false);
-        this.getScopeButton.setEnabled(false);
-        this.sharedValues.getClient().leaveRoom();
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                swapServerAndRoomLists(false);
+                allMuted = false;
+                newRoom.setEnabled(true);
+                muteAllButton.setEnabled(false);
+                setScopeButton.setEnabled(false);
+                leaveRoom.setEnabled(false);
+                pauseButton.setEnabled(false);
+                getScopeButton.setEnabled(false);
+                sharedValues.getClient().leaveRoom();
+                sharedValues.closeCommentSessions();
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     private void addRoomButtonActionPerformed() {
-        JFrame addRoomFrame = new JFrame("Room Options");
-        addRoomFrame.setLayout(new BorderLayout());
-        JPanel topPane = new JPanel(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
-        JLabel errorString = new JLabel(" ");
-        JLabel roomNameLabel = new JLabel("Room Name:      ");
-        roomNameLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        JTextField roomName = new JTextField(25);
-        roomName.addMouseListener(new MouseAdapter() {
+        new SwingWorker<Boolean, Void>() {
             @Override
-            public void mouseEntered(MouseEvent e) {
-                errorString.setText(" ");
-            }
-        });
-        JLabel roomPasswordLabel = new JLabel(" Room Password: ");
-        roomPasswordLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        JTextField roomPassword = new JTextField(25);
-        JButton submit = new JButton("Create Room");
-        submit.addActionListener(e -> {
-            this.sharedValues.getCallbacks().printOutput(roomName.getText());
-            if (roomName.getText().length() > 0) {
-                this.swapServerAndRoomLists(true);
-                this.sharedValues.getClient().createRoom(roomName.getText(), roomPassword.getText());
-                this.muteAllButton.setEnabled(true);
-                this.setScopeButton.setEnabled(true);
-                this.newRoom.setEnabled(false);
-                this.leaveRoom.setEnabled(true);
-                this.pauseButton.setEnabled(true);
-                addRoomFrame.dispose();
-            } else {
-                errorString.setText("Invalid Room name");
+            public Boolean doInBackground() {
+                JFrame addRoomFrame = new JFrame("Room Options");
+                addRoomFrame.setLayout(new BorderLayout());
+                JPanel topPane = new JPanel(new GridBagLayout());
+                GridBagConstraints c = new GridBagConstraints();
+                JLabel errorString = new JLabel(" ");
+                JLabel roomNameLabel = new JLabel("Room Name:      ");
+                roomNameLabel.setHorizontalAlignment(SwingConstants.LEFT);
+                JTextField roomName = new JTextField(25);
+                roomName.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        errorString.setText(" ");
+                    }
+                });
+                JLabel roomPasswordLabel = new JLabel(" Room Password: ");
+                roomPasswordLabel.setHorizontalAlignment(SwingConstants.LEFT);
+                JTextField roomPassword = new JTextField(25);
+                JButton submit = new JButton("Create Room");
+                submit.addActionListener(e -> {
+                    sharedValues.getCallbacks().printOutput(roomName.getText());
+                    if (roomName.getText().length() > 0) {
+                        swapServerAndRoomLists(true);
+                        sharedValues.getClient().createRoom(roomName.getText(), roomPassword.getText());
+                        muteAllButton.setEnabled(true);
+                        setScopeButton.setEnabled(true);
+                        newRoom.setEnabled(false);
+                        leaveRoom.setEnabled(true);
+                        pauseButton.setEnabled(true);
+                        addRoomFrame.dispose();
+                    } else {
+                        errorString.setText("Invalid Room name");
+                    }
+
+                });
+                c.gridx = 0;
+                c.gridy = 0;
+                c.gridwidth = 2;
+                c.fill = GridBagConstraints.HORIZONTAL;
+                topPane.add(errorString);
+                c.gridx = 0;
+                c.gridy = 1;
+                c.gridwidth = 1;
+                c.weightx = 0;
+                topPane.add(roomNameLabel, c);
+                c.gridx = 1;
+                c.gridy = 1;
+                c.weightx = 1;
+                topPane.add(roomName, c);
+                c.gridx = 0;
+                c.gridy = 2;
+                c.weightx = 0;
+                topPane.add(roomPasswordLabel, c);
+                c.gridx = 1;
+                c.gridy = 2;
+                c.weightx = 1;
+                topPane.add(roomPassword, c);
+                c.gridwidth = 2;
+                c.gridx = 0;
+                c.gridy = 3;
+                c.fill = GridBagConstraints.HORIZONTAL;
+                topPane.add(submit, c);
+                addRoomFrame.add(topPane);
+                addRoomFrame.setSize(400, 310);
+                addRoomFrame.pack();
+                addRoomFrame.setVisible(true);
+                return Boolean.TRUE;
             }
 
-        });
-        c.gridx = 0;
-        c.gridy = 0;
-        c.gridwidth = 2;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        topPane.add(errorString);
-        c.gridx = 0;
-        c.gridy = 1;
-        c.gridwidth = 1;
-        c.weightx = 0;
-        topPane.add(roomNameLabel, c);
-        c.gridx = 1;
-        c.gridy = 1;
-        c.weightx = 1;
-        topPane.add(roomName, c);
-        c.gridx = 0;
-        c.gridy = 2;
-        c.weightx = 0;
-        topPane.add(roomPasswordLabel, c);
-        c.gridx = 1;
-        c.gridy = 2;
-        c.weightx = 1;
-        topPane.add(roomPassword, c);
-        c.gridwidth = 2;
-        c.gridx = 0;
-        c.gridy = 3;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        topPane.add(submit, c);
-        addRoomFrame.add(topPane);
-        addRoomFrame.setSize(400, 310);
-        addRoomFrame.pack();
-        addRoomFrame.setVisible(true);
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     private void pauseButtonActionPerformed() {

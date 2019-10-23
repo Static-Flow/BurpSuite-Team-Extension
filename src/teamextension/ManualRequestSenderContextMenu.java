@@ -108,12 +108,12 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         HttpRequestResponse httpRequestResponse =
                 new HttpRequestResponse();
         for (IHttpRequestResponse message : invocation.getSelectedMessages()) {
-            httpRequestResponse.setRequest(message.getRequest());
-            httpRequestResponse.setHttpService(message.getHttpService());
-            this.sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse);
             new SwingWorker<Boolean, Void>() {
                 @Override
                 public Boolean doInBackground() {
+                    httpRequestResponse.setRequest(message.getRequest());
+                    httpRequestResponse.setHttpService(message.getHttpService());
+                    sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse);
                     JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
                     burpTab.setBackgroundAt(
                             burpTab.indexOfTab(SharedValues.EXTENSION_NAME),
@@ -160,10 +160,11 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     }
 
     private void displayCommentsFrame(HttpRequestResponse requestResponse) {
-        if (sharedValues.getClient().isConnected() && sharedValues.getBurpPanel().inRoom()) {
-            new CommentFrame(sharedValues, requestResponse,
-                    sharedValues.getClient().getUsername());
-        }
+
+        CommentFrame commentSession = new CommentFrame(sharedValues,
+                requestResponse,
+                sharedValues.getClient().getUsername());
+        sharedValues.getRequestCommentModel().addCommentSession(commentSession);
     }
 
     private Collection<? extends JMenuItem> createSharingMenu(String topMenuName, IContextMenuInvocation invocation) {
@@ -194,10 +195,9 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
         ArrayList<JMenuItem> menues = new ArrayList<>();
         if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
-            this.sharedValues.getCallbacks().printOutput("here");
             menues.addAll(createLinkMenu(invocation));
         }
-        if (sharedValues.getBurpPanel().inRoom()) {
+        if (sharedValues.getClient() != null && sharedValues.getClient().isConnected() && sharedValues.getBurpPanel().inRoom()) {
             if (Arrays.asList(IContextMenuInvocation.CONTEXT_PROXY_HISTORY,
                     IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE,
                     IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE).contains(invocation.getInvocationContext())) {

@@ -25,11 +25,6 @@ class CommentFrame {
         init(this);
     }
 
-    void close() {
-        sharedValues.getRequestCommentModel().removeCommentSession(this);
-        frame.dispose();
-    }
-
     HttpRequestResponse getRequestResponse() {
         return requestResponse;
     }
@@ -39,9 +34,14 @@ class CommentFrame {
         this.commentsPanel.layoutComments(requestResponse.getComments());
     }
 
+    void close() {
+        sharedValues.getRequestCommentModel().removeCommentSession(this);
+        frame.dispose();
+    }
+
+
     private void init(CommentFrame commentFrame) {
         frame = new JFrame();
-        frame.dispose();
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
