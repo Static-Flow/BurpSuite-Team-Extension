@@ -226,9 +226,9 @@ extends JPanel {
                         }
                         Timer timer = new Timer(3000, e -> {
                             if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
-                                optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), new Color(0x3C3F41));
+                                optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
                             } else {
-                                optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), Color.WHITE);
+                                optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), Color.black);
                             }
 
                         });
@@ -642,9 +642,9 @@ extends JPanel {
                     public Boolean doInBackground() {
                         JTabbedPane optionsPane = getOptionsPane();
                         if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
-                            optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
+                            optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
                         } else {
-                            optionsPane.setBackgroundAt(optionsPane.indexOfTab("Comments"), Color.black);
+                            optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), Color.black);
                         }
                         return Boolean.TRUE;
                     }

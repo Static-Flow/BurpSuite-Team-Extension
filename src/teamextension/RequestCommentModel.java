@@ -44,7 +44,7 @@ class RequestCommentModel extends AbstractListModel {
                         new Color(0xff6633)
                 );
                 JTabbedPane optionsPane = sharedValues.getBurpPanel().getOptionsPane();
-                optionsPane.setBackgroundAt(
+                optionsPane.setForegroundAt(
                         optionsPane.indexOfTab("Comments"),
                         new Color(0xff6633)
                 );
