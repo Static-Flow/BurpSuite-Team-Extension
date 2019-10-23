@@ -64,6 +64,11 @@ extends JPanel {
         }
     }
 
+    void enableRoomControl() {
+        this.setScopeButton.setEnabled(true);
+        this.getScopeButton.setEnabled(false);
+    }
+
     private void startButtonActionPerformed() {
         new SwingWorker<Boolean, Void>() {
             @Override
@@ -81,10 +86,10 @@ extends JPanel {
                     }
                 } else {
                     // if we are connected, leave
+                    sharedValues.getRoomMembersListModel().removeAllElements();
+                    sharedValues.getServerListModel().removeAllElements();
+                    sharedValues.getSharedLinksModel().removeAllElements();
                     if (sharedValues.getClient().isConnected()) {
-                        if (inRoom()) {
-                            sharedValues.getClient().leaveRoom();
-                        }
                         sharedValues.getClient().leaveServer();
                     }
                     resetConnectionUI();
@@ -392,20 +397,23 @@ extends JPanel {
         JPopupMenu roomMenu = new JPopupMenu();
         JMenuItem joinRoom = new JMenuItem("Join");
         joinRoom.addActionListener(e1 -> {
-            if (serverList.getSelectedValue().hasPassword()) {
                 new SwingWorker<Boolean, Void>() {
                     @Override
                     public Boolean doInBackground() {
-                        JDialog roomOptions = new JDialog();
-                        roomOptions.setTitle("Enter Room Password");
-                        JTextField roomPassword = new JTextField();
-                        roomOptions.add(roomPassword);
-                        String roomPasswordValue = JOptionPane.showInputDialog(roomOptions, "Please enter room password");
-                        sharedValues.getCallbacks().printOutput(roomPasswordValue);
-                        if ((roomPasswordValue != null) && (roomPasswordValue.length() > 0)) {
-                            sharedValues.getClient().checkRoomPassword(serverList.getSelectedValue().getRoomName(), roomPasswordValue);
+                        if (serverList.getSelectedValue().hasPassword()) {
+                            JDialog roomOptions = new JDialog();
+                            roomOptions.setTitle("Enter Room Password");
+                            JTextField roomPassword = new JTextField();
+                            roomOptions.add(roomPassword);
+                            String roomPasswordValue = JOptionPane.showInputDialog(roomOptions, "Please enter room password");
+                            sharedValues.getCallbacks().printOutput(roomPasswordValue);
+                            if ((roomPasswordValue != null) && (roomPasswordValue.length() > 0)) {
+                                sharedValues.getClient().checkRoomPassword(serverList.getSelectedValue().getRoomName(), roomPasswordValue);
+                            } else {
+                                writeToAlertPane("Please supply a password for the room.");
+                            }
                         } else {
-                            writeToAlertPane("Please supply a password for the room.");
+                            joinRoom();
                         }
                         return Boolean.TRUE;
                     }
@@ -415,9 +423,6 @@ extends JPanel {
                         //we don't need to do any cleanup so this is empty
                     }
                 }.execute();
-            } else {
-                joinRoom();
-            }
         });
         roomMenu.add(joinRoom);
 
@@ -643,7 +648,13 @@ extends JPanel {
                 new SwingWorker<Boolean, Void>() {
                     @Override
                     public Boolean doInBackground() {
+                        JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
                         JTabbedPane optionsPane = getOptionsPane();
+                        if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
+                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
+                        } else {
+                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
+                        }
                         if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
                             optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
                         } else {
@@ -680,14 +691,6 @@ extends JPanel {
             public Boolean doInBackground() {
                 sharedValues.getCallbacks().printOutput("resetting room/server list");
                 CardLayout cardLayout = (CardLayout) (roomsPanel.getLayout());
-                ServerListModel serverListModel = ((ServerListModel) serverList.getModel());
-                RoomMembersListModel roomMembersListModel = ((RoomMembersListModel) roomMemberList.getModel());
-                if (serverListModel.size() > 0) {
-                    serverListModel.removeAllElements();
-                }
-                if (roomMembersListModel.size() > 0) {
-                    roomMembersListModel.removeAllElements();
-                }
                 if (toRoom) {
                     ((TitledBorder) roomsPanel.getBorder()).setTitle("Room Members");
                     cardLayout.show(roomsPanel, "members");
@@ -884,5 +887,9 @@ extends JPanel {
         this.getScopeButton.setEnabled(true);
         this.muteAllButton.setEnabled(true);
         this.swapServerAndRoomLists(true);
+    }
+
+    JPanel getRoomsPanel() {
+        return this.roomsPanel;
     }
 }

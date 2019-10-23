@@ -15,6 +15,8 @@ implements IExtensionStateListener {
     public void extensionUnloaded() {
         this.sharedValues.closeCommentSessions();
         this.sharedValues.setCustomServerRunning(false);
+        this.sharedValues.getRoomMembersListModel().removeAllElements();
+        this.sharedValues.getServerListModel().removeAllElements();
         this.sharedValues.getBurpPanel().swapServerAndRoomLists(false);
         try {
             if (this.sharedValues.getInnerServer().getSocket() != null) {
@@ -24,9 +26,6 @@ implements IExtensionStateListener {
             this.sharedValues.getCallbacks().printError(e.getMessage());
         }
         if (this.sharedValues.getClient() != null && this.sharedValues.getClient().isConnected()) {
-            if (this.sharedValues.getBurpPanel().inRoom()) {
-                this.sharedValues.getClient().leaveRoom();
-            }
             this.sharedValues.getClient().leaveServer();
         }
     }

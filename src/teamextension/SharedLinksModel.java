@@ -47,4 +47,8 @@ class SharedLinksModel extends AbstractTableModel {
     HttpRequestResponse getBurpMessageAtIndex(int rowIndex) {
         return httpRequestResponses.get(rowIndex);
     }
+
+    void removeAllElements() {
+        httpRequestResponses.clear();
+    }
 }

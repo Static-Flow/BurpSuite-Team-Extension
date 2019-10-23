@@ -56,26 +56,15 @@ class BurpClient {
 
             @Override
             public void onMessage(String message) {
-                new SwingWorker<Boolean, Void>() {
-                    @Override
-                    public Boolean doInBackground() {
-                        try {
-                            BurpTCMessage burpTCMessage =
-                                    sharedValues.getGson().fromJson(new String(sharedValues.getCallbacks().getHelpers().base64Decode(message)),
-                                            BurpTCMessage.class);
-                            parseBurpTCMessage(burpTCMessage);
-                        } catch (JsonSyntaxException e) {
-                            e.printStackTrace(new PrintStream(sharedValues.getCallbacks().getStderr()));
-                        }
-                        return Boolean.TRUE;
-                    }
-
-                    @Override
-                    public void done() {
-                        //we don't need to do any cleanup so this is empty
-                    }
-                }.execute();
-
+                try {
+                    BurpTCMessage burpTCMessage =
+                            sharedValues.getGson().fromJson(new String(
+                                            sharedValues.getCallbacks().getHelpers().base64Decode(message)),
+                                    BurpTCMessage.class);
+                    parseBurpTCMessage(burpTCMessage);
+                } catch (JsonSyntaxException e) {
+                    e.printStackTrace(new PrintStream(sharedValues.getCallbacks().getStderr()));
+                }
             }
 
             @Override
@@ -177,6 +166,10 @@ class BurpClient {
                     for (String member : burpTCMessage.getData().split(",")) {
                         this.sharedValues.getRoomMembersListModel().addElement(member);
                     }
+                    if (burpTCMessage.getData().split(",").length == 1) {
+                        this.sharedValues.getBurpPanel().enableRoomControl();
+                    }
+                    this.sharedValues.getBurpPanel().getRoomsPanel().repaint();
                 }
                 break;
             case GET_ROOMS_MESSAGE:
@@ -208,6 +201,7 @@ class BurpClient {
                 this.sharedValues.getBurpPanel().writeToAlertPane("Bad Room Password.");
                 break;
             case GOOD_PASSWORD_MESSAGE:
+                this.sharedValues.getCallbacks().printOutput("Successful Password");
                 this.sharedValues.getBurpPanel().joinRoom();
             default:
                 this.sharedValues.getCallbacks().printOutput("Bad msg type");
@@ -263,7 +257,9 @@ class BurpClient {
     }
 
     void setRoomScope() {
-        BurpTCMessage syncScopeMessage = new BurpTCMessage(null, MessageType.SYNC_SCOPE_MESSAGE, SharedValues.ROOM, this.sharedValues.getCurrentScope());
+        BurpTCMessage syncScopeMessage = new BurpTCMessage(null, MessageType.SYNC_SCOPE_MESSAGE,
+                SharedValues.ROOM, this.sharedValues.getCurrentScope());
+        this.sharedValues.getCallbacks().printOutput(syncScopeMessage.toString());
         this.sendMessage(syncScopeMessage);
     }
 
@@ -370,10 +366,6 @@ class BurpClient {
 
     void leaveServer() {
         cc.close();
-    }
-
-    String getCurrentRoom() {
-        return this.currentRoom;
     }
 
     boolean isPaused() {
