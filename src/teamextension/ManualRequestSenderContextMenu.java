@@ -174,7 +174,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         menu.add(toGroupMenuItem);
         JMenu toTeammateMenu = new JMenu("To Teammate");
         ArrayList<String> teammembers =
-                this.sharedValues.getServerListModel().getServersMembers();
+                this.sharedValues.getRoomMembersListModel().getRoomMembers();
         for (String teamMember : teammembers) {
             if (!teamMember.equals(sharedValues.getClient().getUsername())) {
                 JMenuItem teammate1MenuItem = new JMenuItem(teamMember);

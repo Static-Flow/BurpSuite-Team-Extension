@@ -25,6 +25,7 @@ public class SharedValues {
     private final IBurpExtenderCallbacks callbacks;
     private final Gson gson;
     private final ServerListModel serverListModel;
+    private final RoomMembersListModel roomMembersListModel;
     private final SharedLinksModel sharedLinksModel;
     private String currentScope;
     private CustomURLServer innerServer;
@@ -43,11 +44,15 @@ public class SharedValues {
         this.gson =
                 builder.setDateFormat("MMM dd HH:mm:ss").create();
         this.serverListModel = new ServerListModel();
+        this.roomMembersListModel = new RoomMembersListModel();
         this.sharedLinksModel = new SharedLinksModel(this);
         this.requestCommentModel = new RequestCommentModel(this);
         this.currentScope = getCallbacks().saveConfigAsJson("target.scope");
     }
 
+    RoomMembersListModel getRoomMembersListModel() {
+        return this.roomMembersListModel;
+    }
 
     ServerListModel getServerListModel() {
         return serverListModel;

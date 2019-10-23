@@ -9,6 +9,7 @@ import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ServerHandshake;
 
 import javax.net.ssl.*;
+import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -56,14 +57,25 @@ class BurpClient {
 
             @Override
             public void onMessage(String message) {
-                try {
-                    BurpTCMessage burpTCMessage =
-                            sharedValues.getGson().fromJson(new String(sharedValues.getCallbacks().getHelpers().base64Decode(message)),
-                                    BurpTCMessage.class);
-                    parseBurpTCMessage(burpTCMessage);
-                } catch (JsonSyntaxException e) {
-                    e.printStackTrace(new PrintStream(sharedValues.getCallbacks().getStderr()));
-                }
+                new SwingWorker<Boolean, Void>() {
+                    @Override
+                    public Boolean doInBackground() {
+                        try {
+                            BurpTCMessage burpTCMessage =
+                                    sharedValues.getGson().fromJson(new String(sharedValues.getCallbacks().getHelpers().base64Decode(message)),
+                                            BurpTCMessage.class);
+                            parseBurpTCMessage(burpTCMessage);
+                        } catch (JsonSyntaxException e) {
+                            e.printStackTrace(new PrintStream(sharedValues.getCallbacks().getStderr()));
+                        }
+                        return Boolean.TRUE;
+                    }
+
+                    @Override
+                    public void done() {
+                        //we don't need to do any cleanup so this is empty
+                    }
+                }.execute();
 
             }
 
@@ -162,20 +174,18 @@ class BurpClient {
                 break;
             case NEW_MEMBER_MESSAGE:
                 if (!SERVER.equals(this.currentRoom)) {
-                    this.sharedValues.getServerListModel().removeAllElements();
+                    this.sharedValues.getRoomMembersListModel().removeAllElements();
                     for (String member : burpTCMessage.getData().split(",")) {
-                        this.sharedValues.getServerListModel().addElement(member);
+                        this.sharedValues.getRoomMembersListModel().addElement(member);
                     }
                 }
                 break;
             case GET_ROOMS_MESSAGE:
                 this.sharedValues.getServerListModel().removeAllElements();
-                if (burpTCMessage.getData().split(",").length == 1) {
-                    this.sharedValues.getServerListModel().addElement("No rooms currently");
-                } else {
+                if (burpTCMessage.getData().length() > 0) {
                     for (String member : burpTCMessage.getData().split(",")) {
-                        if (!SERVER.equals(member))
-                            this.sharedValues.getServerListModel().addElement(member);
+                        String[] roomValues = member.split("::");
+                        this.sharedValues.getServerListModel().addElement(new Room(roomValues[0], Boolean.valueOf(roomValues[1])));
                     }
                 }
                 break;
@@ -191,6 +201,11 @@ class BurpClient {
                     this.sharedValues.getRequestCommentModel().updateOrAddRequestResponse(requestResponse);
                 }
                 break;
+            case BAD_PASSWORD_MESSAGE:
+                this.sharedValues.getBurpPanel().writeToAlertPane("Bad Room Password.");
+                break;
+            case GOOD_PASSWORD_MESSAGE:
+                this.sharedValues.getBurpPanel().joinRoom();
             default:
                 this.sharedValues.getCallbacks().printOutput("Bad msg type");
         }
@@ -211,8 +226,8 @@ class BurpClient {
         this.removeMutedClient(selectedValue);
     }
 
-    void createRoom(String roomName) {
-        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.ADD_ROOM_MESSAGE, roomName, null);
+    void createRoom(String roomName, String roomPassword) {
+        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.ADD_ROOM_MESSAGE, roomName, roomPassword);
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
     }
@@ -223,11 +238,17 @@ class BurpClient {
                 MessageType.LEAVE_ROOM_MESSAGE, SERVER, null);
         this.sendMessage(newRoomMessage);
         this.currentRoom = SERVER;
-        getRoomsMessage();
     }
 
     void joinRoom(String roomName) {
         BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.JOIN_ROOM_MESSAGE, roomName, null);
+        this.currentRoom = roomName;
+        this.sendMessage(newRoomMessage);
+    }
+
+
+    void checkRoomPassword(String roomName, String roomPassword) {
+        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.CHECK_PASSWORD_MESSAGE, roomName, roomPassword);
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
     }
@@ -262,10 +283,21 @@ class BurpClient {
     }
 
     void sendMessage(BurpTCMessage burpTCMessage) {
-        if (!this.isPaused()) {
-            sharedValues.getCallbacks().printOutput("sending message: " + burpTCMessage);
-            cc.send(sharedValues.getCallbacks().getHelpers().base64Encode(sharedValues.getGson().toJson(burpTCMessage)));
-        }
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                if (!isPaused()) {
+                    sharedValues.getCallbacks().printOutput("sending message: " + burpTCMessage);
+                    cc.send(sharedValues.getCallbacks().getHelpers().base64Encode(sharedValues.getGson().toJson(burpTCMessage)));
+                }
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     void sendCommentMessage(HttpRequestResponse requestResponseWithComments) {
@@ -372,5 +404,4 @@ class BurpClient {
     private void resetMutedClients() {
         mutedClients.clear();
     }
-
 }

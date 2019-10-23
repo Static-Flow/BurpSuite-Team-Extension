@@ -16,4 +16,8 @@ public enum MessageType {
     COOKIE_MESSAGE,     //For new cookies
     COMMENT_MESSAGE,    //For sending new comments
     GET_COMMENTS_MESSAGE, //For retrieving new comments
+    BAD_PASSWORD_MESSAGE, //If we entered a wrong room password
+    CHECK_PASSWORD_MESSAGE, //sending room password to check
+    GOOD_PASSWORD_MESSAGE, //successfully auth-ed
+
 }

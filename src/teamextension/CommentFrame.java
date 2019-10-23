@@ -6,7 +6,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 class CommentFrame {
 
@@ -14,25 +16,32 @@ class CommentFrame {
     private SharedValues sharedValues;
     private final String userWhoInitiated;
     private CommentsPanel commentsPanel;
+    private JFrame frame;
 
     CommentFrame(SharedValues sharedValues, HttpRequestResponse requestResponse, String userWhoInitiated) {
         this.sharedValues = sharedValues;
         this.requestResponse = requestResponse;
         this.userWhoInitiated = userWhoInitiated;
-        commentsPanel = init(this);
+        init(this);
     }
 
-    public void setRequestResponse(HttpRequestResponse requestResponse) {
+    void close() {
+        sharedValues.getRequestCommentModel().removeCommentSession(this);
+        frame.dispose();
+    }
+
+    HttpRequestResponse getRequestResponse() {
+        return requestResponse;
+    }
+
+    void setRequestResponse(HttpRequestResponse requestResponse) {
         this.requestResponse = requestResponse;
         this.commentsPanel.layoutComments(requestResponse.getComments());
     }
 
-    public HttpRequestResponse getRequestResponse() {
-        return requestResponse;
-    }
-
-    private CommentsPanel init(CommentFrame commentFrame) {
-        JFrame frame = new JFrame();
+    private void init(CommentFrame commentFrame) {
+        frame = new JFrame();
+        frame.dispose();
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
@@ -66,7 +75,7 @@ class CommentFrame {
         reqRespTabbedPane.addTab("Response", responseMessageToDisplay.getComponent());
         splitter.setTopComponent(reqRespTabbedPane);
 
-        CommentsPanel commentsPanel = new CommentsPanel();
+        commentsPanel = new CommentsPanel();
         if (!requestResponse.getComments().isEmpty()) {
             commentsPanel.layoutComments(requestResponse.getComments());
         }
@@ -85,12 +94,22 @@ class CommentFrame {
                     if (e.isShiftDown()) {
                         commentArea.setText(commentArea.getText() + "\n");
                     } else {
-                        RequestComment newComment = new RequestComment(commentArea.getText().trim(), userWhoInitiated);
-                        sharedValues.getRequestCommentModel().addCommentToNewOrExistingReqResp(newComment, requestResponse);
-                        sharedValues.getRequestCommentModel().addCommentSession(commentFrame);
-                        sharedValues.getClient().sendCommentMessage(sharedValues.getRequestCommentModel().findRequestResponseWithComments(requestResponse));
-                        commentArea.setText("");
-                        commentsPanel.addComment(newComment);
+                        new SwingWorker<Boolean, Void>() {
+                            @Override
+                            public Boolean doInBackground() {
+                                RequestComment newComment = new RequestComment(commentArea.getText().trim(), userWhoInitiated);
+                                sharedValues.getRequestCommentModel().addCommentToNewOrExistingReqResp(newComment, requestResponse);
+                                sharedValues.getClient().sendCommentMessage(sharedValues.getRequestCommentModel().findRequestResponseWithComments(requestResponse));
+                                commentArea.setText("");
+                                commentsPanel.addComment(newComment);
+                                return Boolean.TRUE;
+                            }
+
+                            @Override
+                            public void done() {
+                                //we don't need to do any cleanup so this is empty
+                            }
+                        }.execute();
                     }
                 }
             }
@@ -102,59 +121,98 @@ class CommentFrame {
         frame.setSize(400, 750);
         frame.pack();
         frame.setVisible(true);
-        return commentsPanel;
+    }
+}
+
+class JPanelListCellRenderer implements ListCellRenderer<JPanel> {
+
+    @Override
+    public Component getListCellRendererComponent(JList<? extends JPanel> list, JPanel value, int index, boolean isSelected, boolean cellHasFocus) {
+        return value;
+    }
+}
+
+class JPanelListModel extends AbstractListModel<CommentPanel> {
+    private ArrayList<CommentPanel> panels;
+
+    JPanelListModel() {
+        panels = new ArrayList<>();
+    }
+
+    @Override
+    public int getSize() {
+        return panels.size();
+    }
+
+    void addPanel(CommentPanel panel) {
+        this.panels.add(panel);
+        fireContentsChanged(this, this.panels.size() - 1, this.panels.size() - 1);
+    }
+
+    @Override
+    public CommentPanel getElementAt(int index) {
+        return panels.get(index);
+    }
+
+    void addNewComments(List<RequestComment> comments) {
+        this.panels.clear();
+        for (RequestComment comment : comments) {
+            this.panels.add(new CommentPanel(comment));
+
+        }
+        fireContentsChanged(this, 0, this.panels.size() - 1);
     }
 }
 
 class CommentsPanel extends JScrollPane {
-
-    private JPanel topPane;
-    private GridBagConstraints c;
+    private JList<CommentPanel> commentsList;
 
     CommentsPanel() {
-        setSize(new Dimension(400, 300));
-        topPane = new JPanel(new GridBagLayout());
-        topPane.setBackground(Color.blue);
-        c = new GridBagConstraints();
-        c.gridy = GridBagConstraints.PAGE_END;
-        c.gridx = 0;
-        c.weightx = 1;
-        c.weighty = 1;
-        c.anchor = GridBagConstraints.PAGE_END;
-        c.fill = GridBagConstraints.BOTH;
-        c.gridheight = GridBagConstraints.REMAINDER;
-        c.gridwidth = GridBagConstraints.REMAINDER;
-        topPane.add(new JPanel(), c);
-
-        c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = GridBagConstraints.RELATIVE;
-        c.weightx = 1;
-        c.weighty = 0;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.anchor = GridBagConstraints.PAGE_START;
-        c.gridwidth = GridBagConstraints.REMAINDER;
-        setViewportView(topPane);
+        commentsList = new JList<>();
+        commentsList.setCellRenderer(new JPanelListCellRenderer());
+        commentsList.setModel(new JPanelListModel());
+        setPreferredSize(new Dimension(400, 700));
+        setViewportView(commentsList);
     }
 
     void addComment(RequestComment comment) {
 
-        topPane.add(new CommentPanel(comment), c, topPane.getComponentCount() - 1);
-        revalidate();
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                ((JPanelListModel) commentsList.getModel()).addPanel(new CommentPanel(comment));
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 
     void layoutComments(List<RequestComment> comments) {
-        topPane.removeAll();
-        for (RequestComment comment : comments) {
-            topPane.add(new CommentPanel(comment), c, topPane.getComponentCount() - 1);
-        }
-        revalidate();
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                ((JPanelListModel) commentsList.getModel()).addNewComments(comments);
+                return Boolean.TRUE;
+            }
+
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute();
     }
 }
 
 class CommentPanel extends JPanel {
 
+    private RequestComment comment;
+
     CommentPanel(RequestComment comment) {
+        this.comment = comment;
         setLayout(new BorderLayout());
         setSize(new Dimension(400, 120));
         JPanel statusPane = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -163,4 +221,16 @@ class CommentPanel extends JPanel {
         add(new JLabel(comment.getComment()), BorderLayout.CENTER);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CommentPanel that = (CommentPanel) o;
+        return Objects.equals(comment, that.comment);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(comment);
+    }
 }

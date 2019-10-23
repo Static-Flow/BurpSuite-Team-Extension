@@ -14,6 +14,7 @@ implements IExtensionStateListener {
 
     public void extensionUnloaded() {
         this.sharedValues.setCustomServerRunning(false);
+        this.sharedValues.getBurpPanel().swapServerAndRoomLists(false);
         try {
             if (this.sharedValues.getInnerServer().getSocket() != null) {
                 this.sharedValues.getInnerServer().getSocket().close();
