@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.Base64;
 import java.util.Date;
 import java.util.StringTokenizer;
+import java.util.zip.GZIPInputStream;
 
 public class CustomURLServer implements Runnable {
 
@@ -76,10 +77,27 @@ public class CustomURLServer implements Runnable {
         }
     }
 
+
+    private static String decompress(byte[] compressed) throws IOException {
+        ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
+        GZIPInputStream gis = new GZIPInputStream(bis);
+        BufferedReader br = new BufferedReader(new InputStreamReader(gis, "UTF-8"));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while((line = br.readLine()) != null) {
+            sb.append(line);
+        }
+        br.close();
+        gis.close();
+        bis.close();
+        return sb.toString();
+    }
+
+
     private void parseCustomMessage(String httpQueryString) {
         try {
             HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(
-                    new String(Base64.getDecoder().decode(httpQueryString.substring(1))),
+                    decompress(Base64.getDecoder().decode(httpQueryString.substring(1))),
                     HttpRequestResponse.class);
             this.sharedValues.getCallbacks().sendToRepeater(
                     httpRequestResponse.getHttpService().getHost(),

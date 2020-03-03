@@ -14,8 +14,11 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.Base64;
+import java.util.zip.GZIPOutputStream;
 
 public class BurpTeamPanel
 extends JPanel {
@@ -540,8 +543,15 @@ extends JPanel {
         JMenuItem getLinkItem = new JMenuItem("Get Link");
         getLinkItem.addActionListener(e -> {
             HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
-            StringSelection stringSelection = new StringSelection("burptcmessage/" +
-                    Base64.getEncoder().encodeToString(this.sharedValues.getGson().toJson(burpMessage).getBytes()));
+            StringSelection stringSelection = null;
+            try {
+                stringSelection = new StringSelection(
+                        "burptcmessage/" +
+                            Base64.getEncoder().encodeToString(compress(this.sharedValues.getGson().toJson(burpMessage))));
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+            this.sharedValues.getCallbacks().printOutput(stringSelection.toString());
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(stringSelection, null);
             JOptionPane.showMessageDialog(null, "Link has been added to the clipboard");
@@ -707,6 +717,16 @@ extends JPanel {
                 //we don't need to do any cleanup so this is empty
             }
         }.execute();
+    }
+
+    private static byte[] compress(String data) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length());
+        GZIPOutputStream gzip = new GZIPOutputStream(bos);
+        gzip.write(data.getBytes());
+        gzip.close();
+        byte[] compressed = bos.toByteArray();
+        bos.close();
+        return compressed;
     }
 
     boolean getShareAllRequestsSetting() {
