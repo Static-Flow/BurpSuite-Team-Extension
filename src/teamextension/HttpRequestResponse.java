@@ -31,6 +31,9 @@ public class HttpRequestResponse implements IHttpRequestResponse
 
     @Override
     public byte[] getRequest() {
+//        if(request == null) {
+//            return new byte[]{};
+//        }
         return request;
     }
 
@@ -41,6 +44,9 @@ public class HttpRequestResponse implements IHttpRequestResponse
 
     @Override
     public byte[] getResponse() {
+        if(response == null) {
+            return new byte[]{};
+        }
         return response;
     }
 

@@ -1,8 +1,11 @@
 package teamextension;
 
+import com.google.gson.JsonObject;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.StringTokenizer;
@@ -78,26 +81,68 @@ public class CustomURLServer implements Runnable {
     }
 
 
-    private static String decompress(byte[] compressed) throws IOException {
-        ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
-        GZIPInputStream gis = new GZIPInputStream(bis);
-        BufferedReader br = new BufferedReader(new InputStreamReader(gis, "UTF-8"));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while((line = br.readLine()) != null) {
-            sb.append(line);
+    private ArrayList fromBytesToString(byte[] data) {
+        ArrayList<Integer> values = new ArrayList<>();
+        for(byte b : data){
+           values.add((int) b);
         }
-        br.close();
-        gis.close();
-        bis.close();
-        return sb.toString();
+        return values;
+    }
+
+    private String decompress(byte[] compressed) throws IOException {
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
+            GZIPInputStream gis = new GZIPInputStream(bis);
+            BufferedReader br = new BufferedReader(new InputStreamReader(gis, "UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line+"\n");
+            }
+            br.close();
+            gis.close();
+            bis.close();
+            String strippedJson = sb.toString();
+        /*
+        {"request":[],"httpService":{"host":"detectportal.firefox.com","port":80,"protocol":"http"}}
+         */
+            this.sharedValues.getCallbacks().printOutput(
+                    "StrippedJson: " + strippedJson);
+            String[] strippedJsonByDelimiter = strippedJson.split("BURPTCDELIM");
+            for (String jsonPiece : strippedJsonByDelimiter) {
+                this.sharedValues.getCallbacks().printOutput(jsonPiece);
+            }
+            JsonObject httpService = new JsonObject();
+            httpService.addProperty("host",strippedJsonByDelimiter[2].trim());
+            httpService.addProperty("port",strippedJsonByDelimiter[3].trim());
+            httpService.addProperty("protocol",strippedJsonByDelimiter[4].trim());
+            JsonObject mainJson = new JsonObject();
+            mainJson.add("request",
+                    this.sharedValues.getGson().newBuilder().create().toJsonTree(fromBytesToString(strippedJsonByDelimiter[0].getBytes())));
+            mainJson.add("response",
+                    this.sharedValues.getGson().newBuilder().create().toJsonTree(fromBytesToString(strippedJsonByDelimiter[1].getBytes())));
+            mainJson.add("httpService",httpService);
+
+            return mainJson.toString();
+
+        } catch (NumberFormatException e){
+            sharedValues.getCallbacks().printError("Decompress: " +
+                    e.getMessage());
+            return "";
+        }
+
     }
 
 
     private void parseCustomMessage(String httpQueryString) {
         try {
-            HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(
-                    decompress(Base64.getDecoder().decode(httpQueryString.substring(1))),
+            byte[] Base64Decoded =
+                    Base64.getDecoder().decode(httpQueryString.substring(1));
+            String decompressedJson =
+                    decompress(Base64Decoded);
+            this.sharedValues.getCallbacks().printOutput(
+                    "Decompressed: " + decompressedJson);
+            HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(decompressedJson,
                     HttpRequestResponse.class);
             this.sharedValues.getCallbacks().sendToRepeater(
                     httpRequestResponse.getHttpService().getHost(),
@@ -107,7 +152,11 @@ public class CustomURLServer implements Runnable {
                     httpRequestResponse.getRequest(),
                     "BurpTC Link Payload");
         } catch (Exception e) {
-            sharedValues.getCallbacks().printError(e.getMessage());
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            sharedValues.getCallbacks().printError("ParseCustomMessage: " +
+                    sw);
         }
     }
 

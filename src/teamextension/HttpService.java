@@ -22,6 +22,9 @@ public class HttpService implements IHttpService
 
     @Override
     public String getHost() {
+        if(host == null){
+            return "";
+        }
         return host;
     }
 
@@ -32,6 +35,9 @@ public class HttpService implements IHttpService
 
     @Override
     public String getProtocol() {
+        if(protocol == null){
+            return "";
+        }
         return protocol;
     }
 }

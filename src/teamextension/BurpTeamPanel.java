@@ -543,11 +543,24 @@ extends JPanel {
         JMenuItem getLinkItem = new JMenuItem("Get Link");
         getLinkItem.addActionListener(e -> {
             HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
+
+//            try {
+//                this.sharedValues.getCallbacks().printOutput("Port: "+burpMessage.getHttpService().getPort());
+//                this.sharedValues.getCallbacks().printOutput("Body:" + new String(stripBurpMessage(burpMessage)));
+//            } catch (IOException ex) {
+//                ex.printStackTrace();
+//            }
             StringSelection stringSelection = null;
             try {
+                String jsonString =
+                        this.sharedValues.getGson().toJson(burpMessage);
+                this.sharedValues.getCallbacks().printOutput(jsonString);
+//                stringSelection = new StringSelection(
+//                        "burptcmessage/" +
+//                            Base64.getEncoder().encodeToString(compress(stripBurpMessage(burpMessage))));
                 stringSelection = new StringSelection(
                         "burptcmessage/" +
-                            Base64.getEncoder().encodeToString(compress(this.sharedValues.getGson().toJson(burpMessage))));
+                                Base64.getEncoder().encodeToString(compress(jsonString.getBytes())));
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -695,6 +708,22 @@ extends JPanel {
 
     }
 
+    byte[] stripBurpMessage(HttpRequestResponse burpMessage) throws IOException {
+        ByteArrayOutputStream my_stream = new ByteArrayOutputStream();
+        byte[] divider = "\nBURPTCDELIM".getBytes();
+        my_stream.write(burpMessage.getRequest());
+        my_stream.write(divider);
+        my_stream.write(burpMessage.getResponse());
+        my_stream.write(divider);
+        my_stream.write(burpMessage.getHttpService().getHost().getBytes());
+        my_stream.write(divider);
+        my_stream.write(Integer.toString(burpMessage.getHttpService().getPort()).getBytes());
+        my_stream.write(divider);
+        my_stream.write(burpMessage.getHttpService().getProtocol().getBytes());
+
+        return my_stream.toByteArray();
+    }
+
     void swapServerAndRoomLists(boolean toRoom) {
         new SwingWorker<Boolean, Void>() {
             @Override
@@ -719,10 +748,10 @@ extends JPanel {
         }.execute();
     }
 
-    private static byte[] compress(String data) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length());
+    private static byte[] compress(byte[] data) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
         GZIPOutputStream gzip = new GZIPOutputStream(bos);
-        gzip.write(data.getBytes());
+        gzip.write(data);
         gzip.close();
         byte[] compressed = bos.toByteArray();
         bos.close();
