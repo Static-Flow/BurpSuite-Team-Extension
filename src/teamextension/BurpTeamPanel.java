@@ -225,13 +225,7 @@ extends JPanel {
                 new SwingWorker<Boolean, Void>() {
                     @Override
                     public Boolean doInBackground() {
-                        JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
-                        JTabbedPane optionsPane = getOptionsPane();
-                        if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
-                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
-                        } else {
-                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
-                        }
+                        changeBurpTCTabColor();
                         Timer timer = new Timer(3000, e -> {
                             if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
                                 optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
@@ -254,12 +248,12 @@ extends JPanel {
 
             @Override
             public void ancestorRemoved(AncestorEvent event) {
-
+                //Not needed
             }
 
             @Override
             public void ancestorMoved(AncestorEvent event) {
-
+                //Not needed
             }
         });
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
@@ -399,34 +393,32 @@ extends JPanel {
 
         JPopupMenu roomMenu = new JPopupMenu();
         JMenuItem joinRoom = new JMenuItem("Join");
-        joinRoom.addActionListener(e1 -> {
-                new SwingWorker<Boolean, Void>() {
-                    @Override
-                    public Boolean doInBackground() {
-                        if (serverList.getSelectedValue().hasPassword()) {
-                            JDialog roomOptions = new JDialog();
-                            roomOptions.setTitle("Enter Room Password");
-                            JTextField roomPassword = new JTextField();
-                            roomOptions.add(roomPassword);
-                            String roomPasswordValue = JOptionPane.showInputDialog(roomOptions, "Please enter room password");
-                            sharedValues.getCallbacks().printOutput(roomPasswordValue);
-                            if ((roomPasswordValue != null) && (roomPasswordValue.length() > 0)) {
-                                sharedValues.getClient().checkRoomPassword(serverList.getSelectedValue().getRoomName(), roomPasswordValue);
-                            } else {
-                                writeToAlertPane("Please supply a password for the room.");
-                            }
-                        } else {
-                            joinRoom();
-                        }
-                        return Boolean.TRUE;
+        joinRoom.addActionListener(e1 -> new SwingWorker<Boolean, Void>() {
+            @Override
+            public Boolean doInBackground() {
+                if (serverList.getSelectedValue().hasPassword()) {
+                    JDialog roomOptions = new JDialog();
+                    roomOptions.setTitle("Enter Room Password");
+                    JTextField roomPassword = new JTextField();
+                    roomOptions.add(roomPassword);
+                    String roomPasswordValue = JOptionPane.showInputDialog(roomOptions, "Please enter room password");
+                    sharedValues.getCallbacks().printOutput(roomPasswordValue);
+                    if ((roomPasswordValue != null) && (roomPasswordValue.length() > 0)) {
+                        sharedValues.getClient().checkRoomPassword(serverList.getSelectedValue().getRoomName(), roomPasswordValue);
+                    } else {
+                        writeToAlertPane("Please supply a password for the room.");
                     }
+                } else {
+                    joinRoom();
+                }
+                return Boolean.TRUE;
+            }
 
-                    @Override
-                    public void done() {
-                        //we don't need to do any cleanup so this is empty
-                    }
-                }.execute();
-        });
+            @Override
+            public void done() {
+                //we don't need to do any cleanup so this is empty
+            }
+        }.execute());
         roomMenu.add(joinRoom);
 
         JPopupMenu clientMenu = new JPopupMenu();
@@ -452,9 +444,8 @@ extends JPanel {
         roomMemberList.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    if (!allMuted) {
-                        if (!roomMemberList.getModel().getElementAt(roomMemberList.locationToIndex(e.getPoint())).equals(yourName.getText())) {
+                if (SwingUtilities.isRightMouseButton(e) && !allMuted &&
+                        !roomMemberList.getModel().getElementAt(roomMemberList.locationToIndex(e.getPoint())).equals(yourName.getText())) {
                             roomMemberList.setSelectedIndex(roomMemberList.locationToIndex(e.getPoint()));
                             sharedValues.getCallbacks().printOutput(roomMemberList.getSelectedValue());
                             sharedValues.getCallbacks().printOutput(Boolean.toString(sharedValues.getClient().getMutedClients().contains(roomMemberList.getSelectedValue())));
@@ -466,8 +457,6 @@ extends JPanel {
                                 unmuteClient.setEnabled(false);
                             }
                             clientMenu.show(roomMemberList, e.getPoint().x, e.getPoint().y);
-                        }
-                    }
                 }
             }
         });
@@ -476,11 +465,9 @@ extends JPanel {
         serverList.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    if (serverList.getModel().getSize() > 0) {
+                if (SwingUtilities.isRightMouseButton(e) && serverList.getModel().getSize() > 0) {
                         serverList.setSelectedIndex(serverList.locationToIndex(e.getPoint()));
                         roomMenu.show(serverList, e.getPoint().x, e.getPoint().y);
-                    }
                 }
             }
         });
@@ -543,28 +530,17 @@ extends JPanel {
         JMenuItem getLinkItem = new JMenuItem("Get Link");
         getLinkItem.addActionListener(e -> {
             HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
-
-//            try {
-//                this.sharedValues.getCallbacks().printOutput("Port: "+burpMessage.getHttpService().getPort());
-//                this.sharedValues.getCallbacks().printOutput("Body:" + new String(stripBurpMessage(burpMessage)));
-//            } catch (IOException ex) {
-//                ex.printStackTrace();
-//            }
             StringSelection stringSelection = null;
             try {
                 String jsonString =
                         this.sharedValues.getGson().toJson(burpMessage);
                 this.sharedValues.getCallbacks().printOutput(jsonString);
-//                stringSelection = new StringSelection(
-//                        "burptcmessage/" +
-//                            Base64.getEncoder().encodeToString(compress(stripBurpMessage(burpMessage))));
                 stringSelection = new StringSelection(
                         "burptcmessage/" +
-                                Base64.getEncoder().encodeToString(compress(jsonString.getBytes())));
+                            Base64.getEncoder().encodeToString(compress(new String(stripBurpMessage(burpMessage)))));
             } catch (IOException ex) {
-                ex.printStackTrace();
+                this.sharedValues.getCallbacks().printError(ex.getMessage());
             }
-            this.sharedValues.getCallbacks().printOutput(stringSelection.toString());
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(stringSelection, null);
             JOptionPane.showMessageDialog(null, "Link has been added to the clipboard");
@@ -653,6 +629,7 @@ extends JPanel {
         commentsList.setModel(sharedValues.getRequestCommentModel());
         commentsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         commentsList.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseClicked(MouseEvent evt) {
                 JList list = (JList) evt.getSource();
                 if (evt.getClickCount() == 2) {
@@ -671,13 +648,7 @@ extends JPanel {
                 new SwingWorker<Boolean, Void>() {
                     @Override
                     public Boolean doInBackground() {
-                        JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
-                        JTabbedPane optionsPane = getOptionsPane();
-                        if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
-                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
-                        } else {
-                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
-                        }
+                        changeBurpTCTabColor();
                         if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
                             optionsPane.setForegroundAt(optionsPane.indexOfTab("Comments"), new Color(0xBBBBBB));
                         } else {
@@ -695,12 +666,12 @@ extends JPanel {
 
             @Override
             public void ancestorRemoved(AncestorEvent event) {
-
+                //Not needed
             }
 
             @Override
-            public void ancestorMoved(AncestorEvent event) {
-
+            public void ancestorMoved(AncestorEvent event)  {
+                //Not needed
             }
         });
         optionsPane.addTab("Comments", commentsScrollPane);
@@ -708,20 +679,29 @@ extends JPanel {
 
     }
 
-    byte[] stripBurpMessage(HttpRequestResponse burpMessage) throws IOException {
-        ByteArrayOutputStream my_stream = new ByteArrayOutputStream();
-        byte[] divider = "\nBURPTCDELIM".getBytes();
-        my_stream.write(burpMessage.getRequest());
-        my_stream.write(divider);
-        my_stream.write(burpMessage.getResponse());
-        my_stream.write(divider);
-        my_stream.write(burpMessage.getHttpService().getHost().getBytes());
-        my_stream.write(divider);
-        my_stream.write(Integer.toString(burpMessage.getHttpService().getPort()).getBytes());
-        my_stream.write(divider);
-        my_stream.write(burpMessage.getHttpService().getProtocol().getBytes());
+    private void changeBurpTCTabColor() {
+        JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
+        if (optionsPane.getBackground().equals(new Color(0x3C3F41))) {
+            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
+        } else {
+            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
+        }
+    }
 
-        return my_stream.toByteArray();
+    private byte[] stripBurpMessage(HttpRequestResponse burpMessage) throws IOException {
+        ByteArrayOutputStream myStream = new ByteArrayOutputStream();
+        byte divider = (byte) 127;
+        myStream.write(burpMessage.getRequest());
+        myStream.write(divider);
+        myStream.write(burpMessage.getResponse());
+        myStream.write(divider);
+        myStream.write(burpMessage.getHttpService().getHost().getBytes());
+        myStream.write(divider);
+        myStream.write(Integer.toString(burpMessage.getHttpService().getPort()).getBytes());
+        myStream.write(divider);
+        myStream.write(burpMessage.getHttpService().getProtocol().getBytes());
+
+        return myStream.toByteArray();
     }
 
     void swapServerAndRoomLists(boolean toRoom) {
@@ -748,10 +728,10 @@ extends JPanel {
         }.execute();
     }
 
-    private static byte[] compress(byte[] data) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
+    private static byte[] compress(String data) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length());
         GZIPOutputStream gzip = new GZIPOutputStream(bos);
-        gzip.write(data);
+        gzip.write(data.getBytes());
         gzip.close();
         byte[] compressed = bos.toByteArray();
         bos.close();
@@ -864,7 +844,6 @@ extends JPanel {
                 c.gridwidth = 2;
                 c.fill = GridBagConstraints.HORIZONTAL;
                 topPane.add(errorString);
-                c.gridx = 0;
                 c.gridy = 1;
                 c.gridwidth = 1;
                 c.weightx = 0;

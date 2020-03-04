@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
@@ -93,22 +94,22 @@ public class CustomURLServer implements Runnable {
         try {
             ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
             GZIPInputStream gis = new GZIPInputStream(bis);
-            BufferedReader br = new BufferedReader(new InputStreamReader(gis, "UTF-8"));
+            BufferedReader br = new BufferedReader(new InputStreamReader(gis, StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) {
-                sb.append(line+"\n");
+                sb.append(line);
+                sb.append("\n");
             }
             br.close();
             gis.close();
             bis.close();
             String strippedJson = sb.toString();
-        /*
-        {"request":[],"httpService":{"host":"detectportal.firefox.com","port":80,"protocol":"http"}}
-         */
+
             this.sharedValues.getCallbacks().printOutput(
                     "StrippedJson: " + strippedJson);
-            String[] strippedJsonByDelimiter = strippedJson.split("BURPTCDELIM");
+            String[] strippedJsonByDelimiter =
+                    strippedJson.split(new String(new byte[]{127}));
             for (String jsonPiece : strippedJsonByDelimiter) {
                 this.sharedValues.getCallbacks().printOutput(jsonPiece);
             }
@@ -136,10 +137,10 @@ public class CustomURLServer implements Runnable {
 
     private void parseCustomMessage(String httpQueryString) {
         try {
-            byte[] Base64Decoded =
+            byte[] base64Decoded =
                     Base64.getDecoder().decode(httpQueryString.substring(1));
             String decompressedJson =
-                    decompress(Base64Decoded);
+                    decompress(base64Decoded);
             this.sharedValues.getCallbacks().printOutput(
                     "Decompressed: " + decompressedJson);
             HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(decompressedJson,

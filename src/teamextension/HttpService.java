@@ -8,12 +8,6 @@ public class HttpService implements IHttpService
     private final int port;
     private final String protocol;
 
-    public HttpService() {
-        host = "";
-        port = 0;
-        protocol = "";
-    }
-
     HttpService(IHttpService copy) {
         this.host = copy.getHost();
         this.port = copy.getPort();

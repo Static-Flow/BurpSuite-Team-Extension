@@ -31,9 +31,9 @@ public class HttpRequestResponse implements IHttpRequestResponse
 
     @Override
     public byte[] getRequest() {
-//        if(request == null) {
-//            return new byte[]{};
-//        }
+        if(request == null) {
+            return new byte[]{};
+        }
         return request;
     }
 
@@ -103,10 +103,6 @@ public class HttpRequestResponse implements IHttpRequestResponse
 
     List<RequestComment> getComments() {
         return this.comments;
-    }
-
-    public void setComments(List<RequestComment> comments) {
-        this.comments = comments;
     }
 
     @Override
