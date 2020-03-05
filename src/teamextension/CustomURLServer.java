@@ -111,7 +111,7 @@ public class CustomURLServer implements Runnable {
             String[] strippedJsonByDelimiter =
                     strippedJson.split(new String(new byte[]{127}));
             for (String jsonPiece : strippedJsonByDelimiter) {
-                this.sharedValues.getCallbacks().printOutput(jsonPiece);
+                this.sharedValues.getCallbacks().printOutput("Piece: "+ jsonPiece);
             }
             JsonObject httpService = new JsonObject();
             httpService.addProperty("host",strippedJsonByDelimiter[2].trim());

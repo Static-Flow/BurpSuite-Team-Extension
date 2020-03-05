@@ -532,12 +532,14 @@ extends JPanel {
             HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
             StringSelection stringSelection = null;
             try {
+
                 String jsonString =
                         this.sharedValues.getGson().toJson(burpMessage);
                 this.sharedValues.getCallbacks().printOutput(jsonString);
+                byte[] rawBytes = stripBurpMessage(burpMessage);
                 stringSelection = new StringSelection(
                         "burptcmessage/" +
-                            Base64.getEncoder().encodeToString(compress(new String(stripBurpMessage(burpMessage)))));
+                            Base64.getEncoder().encodeToString(compress(new String(rawBytes))));
             } catch (IOException ex) {
                 this.sharedValues.getCallbacks().printError(ex.getMessage());
             }

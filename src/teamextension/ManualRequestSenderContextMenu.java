@@ -7,6 +7,8 @@ import burp.IHttpRequestResponse;
 import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
 
@@ -82,9 +84,11 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             new SwingWorker<Boolean, Void>() {
                 @Override
                 public Boolean doInBackground() {
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+                    LocalDateTime localDate = LocalDateTime.now();
                     httpRequestResponse.setRequest(message.getRequest());
                     httpRequestResponse.setHttpService(message.getHttpService());
-                    sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse);
+                    sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse, dtf.format(localDate));
                     JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
                     burpTab.setBackgroundAt(
                             burpTab.indexOfTab(SharedValues.EXTENSION_NAME),
@@ -165,7 +169,10 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     @Override
     public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
         ArrayList<JMenuItem> menues = new ArrayList<>();
-        if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
+        if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST , invocation.getInvocationContext())||
+                Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST, invocation.getInvocationContext()) ||
+                Objects.equals(IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE, invocation.getInvocationContext()) ||
+                Objects.equals(IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE, invocation.getInvocationContext())) {
             menues.addAll(createLinkMenu(invocation));
         }
         if (sharedValues.getClient() != null && sharedValues.getClient().isConnected() && sharedValues.getBurpPanel().inRoom()) {

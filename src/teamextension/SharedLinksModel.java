@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 class SharedLinksModel extends AbstractTableModel {
 
-    private final ArrayList<HttpRequestResponse> httpRequestResponses;
+    private final ArrayList<SharedRequest> httpRequestResponses;
     private final SharedValues sharedValues;
 
     SharedLinksModel(SharedValues sharedValues) {
@@ -13,8 +13,9 @@ class SharedLinksModel extends AbstractTableModel {
         httpRequestResponses = new ArrayList<>();
     }
 
-    void addBurpMessage(HttpRequestResponse burpMessage) {
-        httpRequestResponses.add(burpMessage);
+    void addBurpMessage(HttpRequestResponse burpMessage, String datetime) {
+        httpRequestResponses.add(new SharedRequest(burpMessage, datetime));
+        sharedValues.getCallbacks().printOutput("Created SharedRequestObject");
         fireTableDataChanged();
     }
 
@@ -30,22 +31,32 @@ class SharedLinksModel extends AbstractTableModel {
 
     @Override
     public String getColumnName(int col) {
-        return "URL";
+        if (col == 0) {
+            return "URL";
+        } else {
+            return "Date Created";
+        }
     }
 
     @Override
     public int getColumnCount() {
-        return 1;
+        return 2;
     }
 
     @Override
-    public String getValueAt(int rowIndex, int columnIndex) {
-        return sharedValues.getCallbacks().getHelpers().analyzeRequest(
-                httpRequestResponses.get(rowIndex)).getUrl().toString();
+    public Object getValueAt(int row, int col) {
+        Object temp = null;
+        if (col == 0) {
+            temp =
+                    sharedValues.getCallbacks().getHelpers().analyzeRequest(httpRequestResponses.get(row).getRequestResponse()).getUrl().toString();
+        } else if (col == 1) {
+            temp = httpRequestResponses.get(row).getDatetime();
+        }
+        return temp;
     }
 
     HttpRequestResponse getBurpMessageAtIndex(int rowIndex) {
-        return httpRequestResponses.get(rowIndex);
+        return httpRequestResponses.get(rowIndex).getRequestResponse();
     }
 
     void removeAllElements() {
