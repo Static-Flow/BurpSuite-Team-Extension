@@ -14,11 +14,8 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.util.Base64;
-import java.util.zip.GZIPOutputStream;
 
 public class BurpTeamPanel
 extends JPanel {
@@ -59,9 +56,11 @@ extends JPanel {
         this.theirPort.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverport"));
         this.serverPassword.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverpass"));
         if (this.sharedValues.getCallbacks().loadExtensionSetting("certificatePath") != null) {
-            this.sharedValues.setCertFile(new File(this.sharedValues.getCallbacks().loadExtensionSetting("certificatePath")));
+            this.sharedValues.setCertFile(new File(this.sharedValues
+             .getCallbacks().loadExtensionSetting("certificatePath")));
             this.chosenCertLabel.setText("Cert Set");
-            this.sharedValues.setCertKeyFile(new File(this.sharedValues.getCallbacks().loadExtensionSetting("certificateKeyPath")));
+            this.sharedValues.setCertKeyFile(new File(this.sharedValues
+             .getCallbacks().loadExtensionSetting("certificateKeyPath")));
             this.chosenCertKeyLabel.setText("Key Set");
             this.startButton.setEnabled(true);
         }
@@ -529,20 +528,8 @@ extends JPanel {
         });
         JMenuItem getLinkItem = new JMenuItem("Get Link");
         getLinkItem.addActionListener(e -> {
-            HttpRequestResponse burpMessage = ((SharedLinksModel) j.getModel()).getBurpMessageAtIndex(j.getSelectedRow());
-            StringSelection stringSelection = null;
-            try {
-
-                String jsonString =
-                        this.sharedValues.getGson().toJson(burpMessage);
-                this.sharedValues.getCallbacks().printOutput(jsonString);
-                byte[] rawBytes = stripBurpMessage(burpMessage);
-                stringSelection = new StringSelection(
-                        "burptcmessage/" +
-                            Base64.getEncoder().encodeToString(compress(new String(rawBytes))));
-            } catch (IOException ex) {
-                this.sharedValues.getCallbacks().printError(ex.getMessage());
-            }
+            StringSelection stringSelection =
+                    new StringSelection(((SharedLinksModel) j.getModel()).getLinkForSelectedRow(j.getSelectedRow()));
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(stringSelection, null);
             JOptionPane.showMessageDialog(null, "Link has been added to the clipboard");
@@ -690,22 +677,6 @@ extends JPanel {
         }
     }
 
-    private byte[] stripBurpMessage(HttpRequestResponse burpMessage) throws IOException {
-        ByteArrayOutputStream myStream = new ByteArrayOutputStream();
-        byte divider = (byte) 127;
-        myStream.write(burpMessage.getRequest());
-        myStream.write(divider);
-        myStream.write(burpMessage.getResponse());
-        myStream.write(divider);
-        myStream.write(burpMessage.getHttpService().getHost().getBytes());
-        myStream.write(divider);
-        myStream.write(Integer.toString(burpMessage.getHttpService().getPort()).getBytes());
-        myStream.write(divider);
-        myStream.write(burpMessage.getHttpService().getProtocol().getBytes());
-
-        return myStream.toByteArray();
-    }
-
     void swapServerAndRoomLists(boolean toRoom) {
         new SwingWorker<Boolean, Void>() {
             @Override
@@ -728,16 +699,6 @@ extends JPanel {
                 //we don't need to do any cleanup so this is empty
             }
         }.execute();
-    }
-
-    private static byte[] compress(String data) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length());
-        GZIPOutputStream gzip = new GZIPOutputStream(bos);
-        gzip.write(data.getBytes());
-        gzip.close();
-        byte[] compressed = bos.toByteArray();
-        bos.close();
-        return compressed;
     }
 
     boolean getShareAllRequestsSetting() {

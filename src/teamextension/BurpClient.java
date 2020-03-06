@@ -34,6 +34,7 @@ class BurpClient {
 
     private static final String SERVER = "server";
     private final String username;
+    private String serverAddress;
     private WebSocketClient cc;
     private SharedValues sharedValues;
     private ArrayList<String> mutedClients;
@@ -47,6 +48,7 @@ class BurpClient {
         this.username = username;
         mutedClients = new ArrayList<>();
         this.paused = false;
+        this.serverAddress = serverAddress;
         this.sharedValues = sharedValues;
         HashMap<String, String> authHeaders = new HashMap<>();
         authHeaders.put("Auth", serverPassword);
@@ -71,6 +73,7 @@ class BurpClient {
             public void onOpen(ServerHandshake handshake) {
                 sharedValues.getCallbacks().printOutput("You are connected to ChatServer: " + getURI() + "\n");
                 sharedValues.getBurpPanel().writeToAlertPane("Connected to server");
+                getConfigMessage();
                 getRoomsMessage();
             }
 
@@ -203,6 +206,16 @@ class BurpClient {
             case GOOD_PASSWORD_MESSAGE:
                 this.sharedValues.getCallbacks().printOutput("Successful Password");
                 this.sharedValues.getBurpPanel().joinRoom();
+                break;
+            case GET_CONFIG_MESSAGE:
+                String shortenerApiKey = burpTCMessage.getData();
+                sharedValues.getCallbacks().printOutput("API " +
+                        "Key: " + shortenerApiKey);
+                if(shortenerApiKey.length() != 0) {
+                    sharedValues.setUrlShortenerApiKey(shortenerApiKey);
+                }
+
+                break;
             default:
                 this.sharedValues.getCallbacks().printOutput("Bad msg type");
         }
@@ -249,6 +262,13 @@ class BurpClient {
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
     }
+
+    private void getConfigMessage() {
+        BurpTCMessage getConfigMessage = new BurpTCMessage(null,
+                MessageType.GET_CONFIG_MESSAGE, "Self", null);
+        this.sendMessage(getConfigMessage);
+    }
+
 
     private void getRoomsMessage() {
         BurpTCMessage getRoomsMessage = new BurpTCMessage(null,
@@ -398,5 +418,9 @@ class BurpClient {
 
     private void resetMutedClients() {
         mutedClients.clear();
+    }
+
+    public String getServerAddress() {
+        return serverAddress;
     }
 }

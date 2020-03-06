@@ -1,6 +1,7 @@
 package teamextension;
 
 import javax.swing.table.AbstractTableModel;
+import java.io.IOException;
 import java.util.ArrayList;
 
 class SharedLinksModel extends AbstractTableModel {
@@ -13,7 +14,7 @@ class SharedLinksModel extends AbstractTableModel {
         httpRequestResponses = new ArrayList<>();
     }
 
-    void addBurpMessage(HttpRequestResponse burpMessage, String datetime) {
+    void addBurpMessage(HttpRequestResponse burpMessage, String datetime) throws IOException {
         httpRequestResponses.add(new SharedRequest(burpMessage, datetime));
         sharedValues.getCallbacks().printOutput("Created SharedRequestObject");
         fireTableDataChanged();
@@ -47,8 +48,11 @@ class SharedLinksModel extends AbstractTableModel {
     public Object getValueAt(int row, int col) {
         Object temp = null;
         if (col == 0) {
-            temp =
-                    sharedValues.getCallbacks().getHelpers().analyzeRequest(httpRequestResponses.get(row).getRequestResponse()).getUrl().toString();
+            if(httpRequestResponses.get(row).getRequestResponse() != null) {
+                temp = sharedValues.getCallbacks().getHelpers().analyzeRequest(httpRequestResponses.get(row).getRequestResponse()).getUrl().toString();
+            } else {
+                temp = httpRequestResponses.get(row).getLink();
+            }
         } else if (col == 1) {
             temp = httpRequestResponses.get(row).getDatetime();
         }
@@ -61,5 +65,15 @@ class SharedLinksModel extends AbstractTableModel {
 
     void removeAllElements() {
         httpRequestResponses.clear();
+    }
+
+    public void addServerMadeLink(String id, String datetime) {
+        httpRequestResponses.add(new SharedRequest(id, datetime));
+        sharedValues.getCallbacks().printOutput("Created SharedRequestObject");
+        fireTableDataChanged();
+    }
+
+    public String getLinkForSelectedRow(int selectedRow) {
+        return httpRequestResponses.get(selectedRow).getLink();
     }
 }

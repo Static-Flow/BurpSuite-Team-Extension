@@ -6,12 +6,17 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+import javax.net.ssl.*;
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -35,6 +40,7 @@ public class SharedValues {
     private File certFile;
     private File certKeyFile;
     private RequestCommentModel requestCommentModel;
+    private String serverUrlShortenerApiKey;
 
 
     public SharedValues(IBurpExtenderCallbacks iBurpExtenderCallbacks) {
@@ -188,6 +194,42 @@ public class SharedValues {
 
     File getCertKeyFile() {
         return certKeyFile;
+    }
+
+    void setUrlShortenerApiKey(String shortenerApiKey) {
+        this.serverUrlShortenerApiKey = shortenerApiKey;
+    }
+
+    String getUrlShortenerApiKey() {
+        return this.serverUrlShortenerApiKey;
+    }
+
+    HttpsURLConnection getUnsafeURL(URL url) throws NoSuchAlgorithmException, KeyManagementException, IOException {
+        TrustManager[] trustAllCerts =
+                new TrustManager[]{new X509TrustManager() {
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+                }
+                };
+
+        // Install the all-trusting trust manager
+        SSLContext sc = SSLContext.getInstance("SSL");
+        sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+        // Create all-trusting host name verifier
+        HostnameVerifier allHostsValid = (hostname, session) -> true;
+
+        // Install the all-trusting host verifier
+        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+        return (HttpsURLConnection) url.openConnection();
     }
 
 }
