@@ -25,16 +25,32 @@ class RequestCommentModel extends AbstractListModel {
         if (this.requestResponsesWithComments.contains(possibleRequestResponse)) {
             int foundIndex = this.requestResponsesWithComments.indexOf(possibleRequestResponse);
             this.requestResponsesWithComments.get(foundIndex).addComment(comment);
-            this.contentChanged(foundIndex);
+            fireContentsChanged(this, foundIndex,foundIndex);
         } else {
             possibleRequestResponse.addComment(comment);
             this.requestResponsesWithComments.add(possibleRequestResponse);
-            this.contentChanged(this.requestResponsesWithComments.size() - 1);
+            fireContentsChanged(this, 0,
+                    this.requestResponsesWithComments.size());
         }
+        sharedValues.getClient().sendCommentMessage(possibleRequestResponse);
+        this.contentChanged();
     }
 
-    private void contentChanged(int index) {
-        fireContentsChanged(this, index, index);
+    void removeCommentFromNewOrExistingReqResp(RequestComment comment,
+                                        HttpRequestResponse possibleRequestResponse) {
+        HttpRequestResponse requestResponseToEdit =
+                this.requestResponsesWithComments.get(this.requestResponsesWithComments.indexOf(possibleRequestResponse));
+        requestResponseToEdit.getComments().remove(comment);
+        sharedValues.getCallbacks().printOutput("Removed comment: "+requestResponseToEdit);
+        if(requestResponseToEdit.getComments().size() == 0) {
+            this.requestResponsesWithComments.remove(requestResponseToEdit);
+        }
+        fireIntervalRemoved(this,0,this.requestResponsesWithComments.size());
+        sharedValues.getClient().sendCommentMessage(requestResponseToEdit);
+        this.contentChanged();
+    }
+
+    private void contentChanged() {
         new SwingWorker<Boolean, Void>() {
             @Override
             public Boolean doInBackground() {
@@ -58,6 +74,10 @@ class RequestCommentModel extends AbstractListModel {
         }.execute();
     }
 
+    /*
+    This loops through all open comment panels and finds the one which
+    contains our newly changed HttpRequestResponse with updated comment info
+     */
     private void updateCommentSessions(HttpRequestResponse httpRequestResponse) {
         for (CommentFrame commentSession : this.openCommentSessions) {
             if (commentSession.getRequestResponse().equals(httpRequestResponse)) {
@@ -87,26 +107,46 @@ class RequestCommentModel extends AbstractListModel {
     public String getElementAt(int index) {
         HttpRequestResponse requestResponse = requestResponsesWithComments.get(index);
         String url = sharedValues.getCallbacks().getHelpers().analyzeRequest(requestResponse).getUrl().toString();
-        if (url.length() > 120) {
-            return requestResponse.getComments().get(0).getUserWhoCommented() +
-                    " Started a thread about " +
-                    url.substring(0, 120) + "..." +
-                    " with " + requestResponse.getComments().size() + " Comments";
-        } else {
-            return requestResponse.getComments().get(0).getUserWhoCommented() +
-                    " Started a thread about " + url + " with " +
-                    requestResponse.getComments().size() + " Comments";
+        if( requestResponse.getComments().size() > 0) {
+            if (url.length() > 120) {
+                return requestResponse.getComments().get(0).getUserWhoCommented() +
+                        " Started a thread about " +
+                        url.substring(0, 120) + "..." +
+                        " with " + requestResponse.getComments().size() + " Comments";
+            } else {
+                return requestResponse.getComments().get(0).getUserWhoCommented() +
+                        " Started a thread about " + url + " with " +
+                        requestResponse.getComments().size() + " Comments";
+            }
+        } else  {
+            return "";
         }
     }
 
     void updateOrAddRequestResponse(HttpRequestResponse requestResponseWithComments) {
         sharedValues.getCallbacks().printOutput(requestResponseWithComments.toString());
         if (this.requestResponsesWithComments.contains(requestResponseWithComments)) {
-            this.requestResponsesWithComments.set(this.requestResponsesWithComments.indexOf(requestResponseWithComments), requestResponseWithComments);
-            contentChanged(this.requestResponsesWithComments.indexOf(requestResponseWithComments));
+            sharedValues.getCallbacks().printOutput("Found existing comment");
+            int changingIndex =
+                    this.requestResponsesWithComments.indexOf(requestResponseWithComments);
+            if(requestResponseWithComments.getComments().size() == 0) {
+                sharedValues.getCallbacks().printOutput("No more comments. " +
+                        "Removing.");
+                // There are no more comments delete this from the model
+                this.requestResponsesWithComments.remove(requestResponseWithComments);
+                fireIntervalRemoved(this,0,this.requestResponsesWithComments.size());
+            } else {
+                sharedValues.getCallbacks().printOutput("Updating comment");
+                this.requestResponsesWithComments.set(changingIndex, requestResponseWithComments);
+                fireContentsChanged(this, changingIndex, changingIndex);
+            }
+            contentChanged();
         } else {
+            sharedValues.getCallbacks().printOutput("New comment, adding " +
+                    "to model.");
             this.requestResponsesWithComments.add(requestResponseWithComments);
-            contentChanged(this.requestResponsesWithComments.size() - 1);
+            fireContentsChanged(this,0,this.requestResponsesWithComments.size());
+            contentChanged();
         }
         updateCommentSessions(requestResponseWithComments);
     }

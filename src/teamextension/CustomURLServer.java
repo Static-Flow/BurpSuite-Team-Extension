@@ -1,11 +1,20 @@
 package teamextension;
 
+import com.google.gson.JsonObject;
+
+import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.StringTokenizer;
+import java.util.zip.GZIPInputStream;
 
 public class CustomURLServer implements Runnable {
 
@@ -76,20 +85,115 @@ public class CustomURLServer implements Runnable {
         }
     }
 
-    private void parseCustomMessage(String httpQueryString) {
+
+    private ArrayList fromBytesToString(byte[] data) {
+        ArrayList<Integer> values = new ArrayList<>();
+        for(byte b : data){
+           values.add((int) b);
+        }
+        return values;
+    }
+
+    private String decompress(byte[] compressed) throws IOException {
         try {
-            HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(
-                    new String(Base64.getDecoder().decode(httpQueryString.substring(1))),
-                    HttpRequestResponse.class);
-            this.sharedValues.getCallbacks().sendToRepeater(
-                    httpRequestResponse.getHttpService().getHost(),
-                    httpRequestResponse.getHttpService().getPort(),
-                    httpRequestResponse.getHttpService().getProtocol()
-                            .equalsIgnoreCase("https"),
-                    httpRequestResponse.getRequest(),
-                    "BurpTC Link Payload");
-        } catch (Exception e) {
-            sharedValues.getCallbacks().printError(e.getMessage());
+            ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
+            GZIPInputStream gis = new GZIPInputStream(bis);
+            BufferedReader br = new BufferedReader(new InputStreamReader(gis, StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+                sb.append("\n");
+            }
+            br.close();
+            gis.close();
+            bis.close();
+            String strippedJson = sb.toString();
+
+            this.sharedValues.getCallbacks().printOutput(
+                    "StrippedJson: " + strippedJson);
+            String[] strippedJsonByDelimiter =
+                    strippedJson.split(new String(new byte[]{127}));
+            for (String jsonPiece : strippedJsonByDelimiter) {
+                this.sharedValues.getCallbacks().printOutput("Piece: "+ jsonPiece);
+            }
+            JsonObject httpService = new JsonObject();
+            httpService.addProperty("host",strippedJsonByDelimiter[2].trim());
+            httpService.addProperty("port",strippedJsonByDelimiter[3].trim());
+            httpService.addProperty("protocol",strippedJsonByDelimiter[4].trim());
+            JsonObject mainJson = new JsonObject();
+            mainJson.add("request",
+                    this.sharedValues.getGson().newBuilder().create().toJsonTree(fromBytesToString(strippedJsonByDelimiter[0].getBytes())));
+            mainJson.add("response",
+                    this.sharedValues.getGson().newBuilder().create().toJsonTree(fromBytesToString(strippedJsonByDelimiter[1].getBytes())));
+            mainJson.add("httpService",httpService);
+
+            return mainJson.toString();
+
+        } catch (NumberFormatException e){
+            sharedValues.getCallbacks().printError("Decompress: " +
+                    e.getMessage());
+            return "";
+        }
+
+    }
+
+
+    private void parseCustomMessage(String httpQueryString) {
+        String[] splitValues = httpQueryString.split("shortener/");
+        if(splitValues.length == 1) {
+            try {
+                byte[] base64Decoded =
+                        Base64.getDecoder().decode(splitValues[0].substring(1));
+                String decompressedJson =
+                        decompress(base64Decoded);
+                this.sharedValues.getCallbacks().printOutput(
+                        "Decompressed: " + decompressedJson);
+                HttpRequestResponse httpRequestResponse = this.sharedValues.getGson().fromJson(decompressedJson,
+                        HttpRequestResponse.class);
+                this.sharedValues.getCallbacks().sendToRepeater(
+                        httpRequestResponse.getHttpService().getHost(),
+                        httpRequestResponse.getHttpService().getPort(),
+                        httpRequestResponse.getHttpService().getProtocol()
+                                .equalsIgnoreCase("https"),
+                        httpRequestResponse.getRequest(),
+                        "BurpTC Link Payload");
+            } catch (Exception e) {
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+                sharedValues.getCallbacks().printError("ParseCustomMessage: " +
+                        sw);
+            }
+        } else {
+            //burptcmessage/shortener/aHR0cHM6Ly9sb2NhbGhvc3Q6OTk5OS9zaG9ydGVuZXI/aWQ9bE1HZlRIeFYy
+            try {
+                URL url = new URL(new String(Base64.getDecoder().decode(splitValues[1])));
+                HttpsURLConnection con = sharedValues.getUnsafeURL(url);
+                con.setRequestMethod("GET");
+
+                BufferedReader br = new BufferedReader(
+                        new InputStreamReader(con.getInputStream(),
+                                StandardCharsets.UTF_8));
+                StringBuilder response = new StringBuilder();
+                String responseLine;
+                while ((responseLine = br.readLine()) != null) {
+                    response.append(responseLine.trim());
+                }
+                HttpRequestResponse httpRequestResponse =
+                        this.sharedValues.getGson().fromJson(response.toString(),
+                        HttpRequestResponse.class);
+                this.sharedValues.getCallbacks().sendToRepeater(
+                        httpRequestResponse.getHttpService().getHost(),
+                        httpRequestResponse.getHttpService().getPort(),
+                        httpRequestResponse.getHttpService().getProtocol()
+                                .equalsIgnoreCase("https"),
+                        httpRequestResponse.getRequest(),
+                        "BurpTC Link Payload");
+            } catch (IOException | NoSuchAlgorithmException | KeyManagementException e) {
+                sharedValues.getCallbacks().printError("Decompress: " +
+                        e.getMessage());
+            }
         }
     }
 

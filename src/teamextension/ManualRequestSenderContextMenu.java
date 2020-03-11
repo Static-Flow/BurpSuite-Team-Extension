@@ -4,9 +4,20 @@ import burp.IContextMenuFactory;
 import burp.IContextMenuInvocation;
 import burp.IHttpRequestResponse;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
 
@@ -66,15 +77,6 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     }
 
 
-    private Collection<? extends JMenuItem> createLinkMenu(IContextMenuInvocation invocation) {
-        JMenuItem click = new JMenuItem("create link");
-        click.addActionListener(e ->
-                createLinkForSelectedRequests(invocation));
-        ArrayList<JMenuItem> menuList = new ArrayList<>();
-        menuList.add(click);
-        return menuList;
-    }
-
     private void createLinkForSelectedRequests(IContextMenuInvocation invocation) {
         HttpRequestResponse httpRequestResponse =
                 new HttpRequestResponse();
@@ -82,25 +84,16 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             new SwingWorker<Boolean, Void>() {
                 @Override
                 public Boolean doInBackground() {
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+                    LocalDateTime localDate = LocalDateTime.now();
                     httpRequestResponse.setRequest(message.getRequest());
                     httpRequestResponse.setHttpService(message.getHttpService());
-                    sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse);
-                    JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
-                    burpTab.setBackgroundAt(
-                            burpTab.indexOfTab(SharedValues.EXTENSION_NAME),
-                            new Color(0xff6633)
-                    );
-                    Timer timer = new Timer(3000, e -> {
-                        if (burpTab.getBackground().equals(new Color(0x3C3F41))) {
-                            //We are in dark mode
-                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
-                        } else {
-                            burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
-                        }
-
-                    });
-                    timer.setRepeats(false);
-                    timer.start();
+                    try {
+                        sharedValues.getSharedLinksModel().addBurpMessage(httpRequestResponse, dtf.format(localDate));
+                        visuallyUpdateBurpTCTab();
+                    } catch (IOException e) {
+                        sharedValues.getCallbacks().printError(e.getMessage());
+                    }
                     return Boolean.TRUE;
                 }
 
@@ -138,6 +131,103 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
         sharedValues.getRequestCommentModel().addCommentSession(commentSession);
     }
 
+    private Collection<? extends JMenuItem> createLinkMenu(IContextMenuInvocation invocation) {
+        JMenu menu = new JMenu("Create Link");
+        JMenuItem compressedLink = new JMenuItem("Create Compressed Link");
+        compressedLink.addActionListener(e ->
+                createLinkForSelectedRequests(invocation));
+        menu.add(compressedLink);
+
+        JMenuItem shortenedLink = new JMenuItem("Create Shortened Link");
+        shortenedLink.addActionListener(e ->
+                createLinkForSelectedRequestsUsingServer(invocation));
+        menu.add(shortenedLink);
+
+        ArrayList<JMenuItem> menuList = new ArrayList<>();
+        menuList.add(menu);
+        return menuList;
+    }
+
+    private void createLinkForSelectedRequestsUsingServer(IContextMenuInvocation invocation) {
+        HttpRequestResponse httpRequestResponse =
+                new HttpRequestResponse();
+        for (IHttpRequestResponse message : invocation.getSelectedMessages()) {
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                public Boolean doInBackground() {
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+                    LocalDateTime localDate = LocalDateTime.now();
+                    httpRequestResponse.setRequest(message.getRequest());
+                    httpRequestResponse.setHttpService(message.getHttpService());
+
+                    String requestToShorten =
+                            sharedValues.getGson().toJson(httpRequestResponse,
+                            HttpRequestResponse.class);
+                    sharedValues.getCallbacks().printOutput(requestToShorten);
+
+                    try {
+                        URL url =
+                                new URL("https://" + sharedValues.getClient().getServerAddress() +
+                                        "/shortener?key="+sharedValues.getUrlShortenerApiKey());
+                        HttpsURLConnection con = sharedValues.getUnsafeURL(url);
+                        con.setRequestMethod("POST");
+                        con.setRequestProperty("Content-Type", "application/json; utf-8");
+                        con.setDoOutput(true);
+
+
+                        OutputStream os = con.getOutputStream();
+                        byte[] input = requestToShorten.getBytes(StandardCharsets.UTF_8);
+                        os.write(input, 0, input.length);
+
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(con.getInputStream(),
+                                        StandardCharsets.UTF_8));
+                        StringBuilder response = new StringBuilder();
+                        String responseLine;
+                        while ((responseLine = br.readLine()) != null) {
+                            sharedValues.getCallbacks().printOutput(
+                                    "Line: "+responseLine);
+                            response.append(responseLine.trim());
+                        }
+                        sharedValues.getCallbacks().printOutput(
+                                "Response: "+response.toString());
+                        sharedValues.getSharedLinksModel().addServerMadeLink(response.toString(), dtf.format(localDate));
+                        visuallyUpdateBurpTCTab();
+
+                    } catch (IOException | NoSuchAlgorithmException | KeyManagementException e) {
+                        sharedValues.getCallbacks().printError(e.getMessage());
+                    }
+                    return Boolean.TRUE;
+                }
+
+                @Override
+                public void done() {
+                    //we don't need to do any cleanup so this is empty
+                }
+            }.execute();
+        }
+    }
+
+    private void visuallyUpdateBurpTCTab() {
+        JTabbedPane burpTab = ((JTabbedPane) sharedValues.getBurpPanel().getParent());
+        burpTab.setBackgroundAt(
+                burpTab.indexOfTab(SharedValues.EXTENSION_NAME),
+                new Color(0xff6633)
+        );
+        Timer timer = new Timer(3000, e -> {
+            if (burpTab.getBackground().equals(new Color(0x3C3F41))) {
+                //We are in dark mode
+                burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), new Color(0xBBBBBB));
+            } else {
+                burpTab.setBackgroundAt(burpTab.indexOfTab(SharedValues.EXTENSION_NAME), Color.black);
+            }
+
+        });
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+
     private Collection<? extends JMenuItem> createSharingMenu(String topMenuName, IContextMenuInvocation invocation) {
         JMenu menu = new JMenu(topMenuName);
         JMenuItem toGroupMenuItem = new JMenuItem("To Group");
@@ -165,7 +255,10 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
     @Override
     public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
         ArrayList<JMenuItem> menues = new ArrayList<>();
-        if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST, invocation.getInvocationContext())) {
+        if (Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST , invocation.getInvocationContext())||
+                Objects.equals(IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST, invocation.getInvocationContext()) ||
+                Objects.equals(IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TREE, invocation.getInvocationContext()) ||
+                Objects.equals(IContextMenuInvocation.CONTEXT_TARGET_SITE_MAP_TABLE, invocation.getInvocationContext())) {
             menues.addAll(createLinkMenu(invocation));
         }
         if (sharedValues.getClient() != null && sharedValues.getClient().isConnected() && sharedValues.getBurpPanel().inRoom()) {

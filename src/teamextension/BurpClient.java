@@ -34,6 +34,7 @@ class BurpClient {
 
     private static final String SERVER = "server";
     private final String username;
+    private String serverAddress;
     private WebSocketClient cc;
     private SharedValues sharedValues;
     private ArrayList<String> mutedClients;
@@ -47,6 +48,7 @@ class BurpClient {
         this.username = username;
         mutedClients = new ArrayList<>();
         this.paused = false;
+        this.serverAddress = serverAddress;
         this.sharedValues = sharedValues;
         HashMap<String, String> authHeaders = new HashMap<>();
         authHeaders.put("Auth", serverPassword);
@@ -71,6 +73,7 @@ class BurpClient {
             public void onOpen(ServerHandshake handshake) {
                 sharedValues.getCallbacks().printOutput("You are connected to ChatServer: " + getURI() + "\n");
                 sharedValues.getBurpPanel().writeToAlertPane("Connected to server");
+                getConfigMessage();
                 getRoomsMessage();
             }
 
@@ -203,6 +206,16 @@ class BurpClient {
             case GOOD_PASSWORD_MESSAGE:
                 this.sharedValues.getCallbacks().printOutput("Successful Password");
                 this.sharedValues.getBurpPanel().joinRoom();
+                break;
+            case GET_CONFIG_MESSAGE:
+                String shortenerApiKey = burpTCMessage.getData();
+                sharedValues.getCallbacks().printOutput("API " +
+                        "Key: " + shortenerApiKey);
+                if(shortenerApiKey.length() != 0) {
+                    sharedValues.setUrlShortenerApiKey(shortenerApiKey);
+                }
+
+                break;
             default:
                 this.sharedValues.getCallbacks().printOutput("Bad msg type");
         }
@@ -250,6 +263,13 @@ class BurpClient {
         this.sendMessage(newRoomMessage);
     }
 
+    private void getConfigMessage() {
+        BurpTCMessage getConfigMessage = new BurpTCMessage(null,
+                MessageType.GET_CONFIG_MESSAGE, "Self", null);
+        this.sendMessage(getConfigMessage);
+    }
+
+
     private void getRoomsMessage() {
         BurpTCMessage getRoomsMessage = new BurpTCMessage(null,
                 MessageType.GET_ROOMS_MESSAGE, "Self", null);
@@ -287,7 +307,12 @@ class BurpClient {
             public Boolean doInBackground() {
                 if (!isPaused()) {
                     sharedValues.getCallbacks().printOutput("sending message: " + burpTCMessage);
-                    cc.send(sharedValues.getCallbacks().getHelpers().base64Encode(sharedValues.getGson().toJson(burpTCMessage)));
+                    String json = sharedValues.getGson().toJson(burpTCMessage);
+                    sharedValues.getCallbacks().printOutput("JSON: "+json);
+                    String message =
+                            sharedValues.getCallbacks().getHelpers().base64Encode(json);
+                    sharedValues.getCallbacks().printOutput("base64: "+message);
+                    cc.send(message);
                 }
                 return Boolean.TRUE;
             }
@@ -300,9 +325,10 @@ class BurpClient {
     }
 
     void sendCommentMessage(HttpRequestResponse requestResponseWithComments) {
-        BurpTCMessage muteMessage = new BurpTCMessage(requestResponseWithComments,
+        BurpTCMessage commentMessage =
+                new BurpTCMessage(requestResponseWithComments,
                 MessageType.COMMENT_MESSAGE, SharedValues.ROOM, Integer.toString(requestResponseWithComments.hashCode()));
-        this.sendMessage(muteMessage);
+        this.sendMessage(commentMessage);
     }
 
     private SSLContext getSSLContextFromLetsEncrypt() {
@@ -398,5 +424,9 @@ class BurpClient {
 
     private void resetMutedClients() {
         mutedClients.clear();
+    }
+
+    String getServerAddress() {
+        return serverAddress;
     }
 }
