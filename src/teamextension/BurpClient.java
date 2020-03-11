@@ -307,7 +307,12 @@ class BurpClient {
             public Boolean doInBackground() {
                 if (!isPaused()) {
                     sharedValues.getCallbacks().printOutput("sending message: " + burpTCMessage);
-                    cc.send(sharedValues.getCallbacks().getHelpers().base64Encode(sharedValues.getGson().toJson(burpTCMessage)));
+                    String json = sharedValues.getGson().toJson(burpTCMessage);
+                    sharedValues.getCallbacks().printOutput("JSON: "+json);
+                    String message =
+                            sharedValues.getCallbacks().getHelpers().base64Encode(json);
+                    sharedValues.getCallbacks().printOutput("base64: "+message);
+                    cc.send(message);
                 }
                 return Boolean.TRUE;
             }
@@ -320,9 +325,10 @@ class BurpClient {
     }
 
     void sendCommentMessage(HttpRequestResponse requestResponseWithComments) {
-        BurpTCMessage muteMessage = new BurpTCMessage(requestResponseWithComments,
+        BurpTCMessage commentMessage =
+                new BurpTCMessage(requestResponseWithComments,
                 MessageType.COMMENT_MESSAGE, SharedValues.ROOM, Integer.toString(requestResponseWithComments.hashCode()));
-        this.sendMessage(muteMessage);
+        this.sendMessage(commentMessage);
     }
 
     private SSLContext getSSLContextFromLetsEncrypt() {
@@ -420,7 +426,7 @@ class BurpClient {
         mutedClients.clear();
     }
 
-    public String getServerAddress() {
+    String getServerAddress() {
         return serverAddress;
     }
 }

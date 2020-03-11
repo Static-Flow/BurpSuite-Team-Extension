@@ -621,12 +621,20 @@ extends JPanel {
             @Override
             public void mouseClicked(MouseEvent evt) {
                 JList list = (JList) evt.getSource();
-                if (evt.getClickCount() == 2) {
+                if (evt.getClickCount() == 2 && list.getModel().getSize() > 0) {
                     int index = list.locationToIndex(evt.getPoint());
-                    CommentFrame commentSession = new CommentFrame(sharedValues,
-                            ((RequestCommentModel) commentsList.getModel()).getTrueElementAt(index),
-                            sharedValues.getClient().getUsername());
+                    RequestCommentModel requestCommentModel =
+                            ((RequestCommentModel) commentsList.getModel());
+                    HttpRequestResponse requestResponse =
+                            requestCommentModel.getTrueElementAt(index);
+                    String userName =
+                            sharedValues.getClient().getUsername();
+                    CommentFrame commentSession =
+                            new CommentFrame(sharedValues,
+                                    requestResponse,
+                                    userName);
                     sharedValues.getRequestCommentModel().addCommentSession(commentSession);
+
                 }
             }
         });

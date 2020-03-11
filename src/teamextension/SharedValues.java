@@ -48,6 +48,8 @@ public class SharedValues {
         this.currentCookieJar = this.callbacks.getCookieJarContents();
         GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(Date.class, new DateDeserializer(callbacks));
+        builder.registerTypeAdapter(RequestComment.class,
+                new RequestCommentSerializer());
         this.gson =
                 builder.setDateFormat("MMM dd HH:mm:ss").create();
         this.serverListModel = new ServerListModel();

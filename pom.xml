@@ -45,7 +45,6 @@
         <sourceDirectory>${project.basedir}/src</sourceDirectory>
         <finalName>BurpSuiteCollaborationClient</finalName>
         <plugins>
-
             <!-- download source code in Eclipse, best practice -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

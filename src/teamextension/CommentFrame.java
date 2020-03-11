@@ -6,9 +6,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 class CommentFrame {
 
@@ -53,13 +57,15 @@ class CommentFrame {
         splitter.setDividerLocation(450);
         splitter.setOrientation(JSplitPane.VERTICAL_SPLIT);
         JTabbedPane reqRespTabbedPane = new JTabbedPane();
+        sharedValues.getCallbacks().printOutput(requestResponse.toString());
         IMessageEditor requestMessageToDisplay = sharedValues.getCallbacks().createMessageEditor(
                 new MessageEditorController(
                         requestResponse.getHttpService(),
                         requestResponse.getRequest(),
                         requestResponse.getResponse()),
                 false);
-        requestMessageToDisplay.setMessage(requestResponse.getRequest(), true);
+        requestMessageToDisplay.setMessage(requestResponse.getRequest(),
+                true);
         IMessageEditor responseMessageToDisplay = sharedValues.getCallbacks().createMessageEditor(
                 new MessageEditorController(
                         requestResponse.getHttpService(),
@@ -71,14 +77,20 @@ class CommentFrame {
         } else {
             responseMessageToDisplay.setMessage(new byte[]{}, false);
         }
-        reqRespTabbedPane.addTab("Request", requestMessageToDisplay.getComponent());
-        reqRespTabbedPane.addTab("Response", responseMessageToDisplay.getComponent());
+        reqRespTabbedPane.addTab("Request",
+                requestMessageToDisplay.getComponent());
+        reqRespTabbedPane.addTab("Response",
+                responseMessageToDisplay.getComponent());
         splitter.setTopComponent(reqRespTabbedPane);
-
-        commentsPanel = new CommentsPanel();
+        sharedValues.getCallbacks().printOutput("Initialized request and " +
+                "response");
+        commentsPanel = new CommentsPanel(this.requestResponse,
+                this.sharedValues);
+        sharedValues.getCallbacks().printOutput("Created comment panel");
         if (!requestResponse.getComments().isEmpty()) {
             commentsPanel.layoutComments(requestResponse.getComments());
         }
+        sharedValues.getCallbacks().printOutput("added new comments");
         splitter.setBottomComponent(commentsPanel);
         topPane.add(splitter, BorderLayout.CENTER);
 
@@ -97,9 +109,9 @@ class CommentFrame {
                         new SwingWorker<Boolean, Void>() {
                             @Override
                             public Boolean doInBackground() {
-                                RequestComment newComment = new RequestComment(commentArea.getText().trim(), userWhoInitiated);
+                                RequestComment newComment =
+                                        new RequestComment(commentArea.getText().trim(), userWhoInitiated, new Date());
                                 sharedValues.getRequestCommentModel().addCommentToNewOrExistingReqResp(newComment, requestResponse);
-                                sharedValues.getClient().sendCommentMessage(sharedValues.getRequestCommentModel().findRequestResponseWithComments(requestResponse));
                                 commentArea.setText("");
                                 commentsPanel.addComment(newComment);
                                 return Boolean.TRUE;
@@ -132,8 +144,8 @@ class JPanelListCellRenderer implements ListCellRenderer<JPanel> {
     }
 }
 
-class JPanelListModel extends AbstractListModel<CommentPanel> {
-    private ArrayList<CommentPanel> panels;
+class JPanelListModel extends AbstractListModel<RequestComment> {
+    private ArrayList<RequestComment> panels;
 
     JPanelListModel() {
         panels = new ArrayList<>();
@@ -144,33 +156,68 @@ class JPanelListModel extends AbstractListModel<CommentPanel> {
         return panels.size();
     }
 
-    void addPanel(CommentPanel panel) {
+    void removeComment(int index) {
+        this.panels.remove(index);
+        fireContentsChanged(this, 0, this.panels.size());
+    }
+
+    void addPanel(RequestComment panel) {
         this.panels.add(panel);
-        fireContentsChanged(this, this.panels.size() - 1, this.panels.size() - 1);
+        fireContentsChanged(this, 0, this.panels.size());
     }
 
     @Override
-    public CommentPanel getElementAt(int index) {
+    public RequestComment getElementAt(int index) {
         return panels.get(index);
     }
 
-    void addNewComments(List<RequestComment> comments) {
+    void addNewComments(List<RequestComment> comments) throws ParseException {
         this.panels.clear();
-        for (RequestComment comment : comments) {
-            this.panels.add(new CommentPanel(comment));
-
+        SimpleDateFormat format = new SimpleDateFormat("MMM dd HH:mm:ss");
+        for(RequestComment requestComment : comments) {
+            this.panels.add(new RequestComment(requestComment.getComment(),
+                    requestComment.getUserWhoCommented(),
+                    format.parse(requestComment.getTimeOfComment())));
         }
-        fireContentsChanged(this, 0, this.panels.size() - 1);
+        fireContentsChanged(this, 0, this.panels.size());
     }
 }
 
 class CommentsPanel extends JScrollPane {
-    private JList<CommentPanel> commentsList;
-
-    CommentsPanel() {
+    private JList<RequestComment> commentsList;
+    private SharedValues sharedValues;
+    CommentsPanel(HttpRequestResponse requestResponse, SharedValues sharedValues) {
+        this.sharedValues = sharedValues;
         commentsList = new JList<>();
         commentsList.setCellRenderer(new JPanelListCellRenderer());
         commentsList.setModel(new JPanelListModel());
+        commentsList.addMouseListener( new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                /*
+                Checks to see if it is a right click and if the click point is
+                within the bounds of a Comments borders
+                 */
+                if ( SwingUtilities.isRightMouseButton(e) && commentsList.getCellBounds(commentsList.locationToIndex(e.getPoint()),commentsList.locationToIndex(e.getPoint())).contains(e.getPoint())) {
+                    int selectedIndex =
+                            commentsList.locationToIndex(e.getPoint());
+                    RequestComment selectedComment =
+                            commentsList.getModel().getElementAt(selectedIndex);
+                    if (sharedValues.getClient().getUsername().equals(selectedComment.getUserWhoCommented())) {
+                        JPopupMenu menu = new JPopupMenu();
+                        JMenuItem itemRemove = new JMenuItem("Delete");
+                        itemRemove.addActionListener(e1 -> {
+                            sharedValues.getCallbacks().printOutput(
+                                    "Deleting comment " + selectedComment);
+                            ((JPanelListModel) commentsList.getModel()).removeComment(selectedIndex);
+                            sharedValues.getRequestCommentModel().removeCommentFromNewOrExistingReqResp(selectedComment, requestResponse);
+                        });
+                        menu.add(itemRemove);
+                        menu.show(commentsList, e.getPoint().x, e.getPoint().y);
+                    }
+                }
+            }
+        });
         setPreferredSize(new Dimension(400, 700));
         setViewportView(commentsList);
     }
@@ -180,7 +227,7 @@ class CommentsPanel extends JScrollPane {
         new SwingWorker<Boolean, Void>() {
             @Override
             public Boolean doInBackground() {
-                ((JPanelListModel) commentsList.getModel()).addPanel(new CommentPanel(comment));
+                ((JPanelListModel) commentsList.getModel()).addPanel(comment);
                 return Boolean.TRUE;
             }
 
@@ -195,7 +242,11 @@ class CommentsPanel extends JScrollPane {
         new SwingWorker<Boolean, Void>() {
             @Override
             public Boolean doInBackground() {
-                ((JPanelListModel) commentsList.getModel()).addNewComments(comments);
+                try {
+                    ((JPanelListModel) commentsList.getModel()).addNewComments(comments);
+                } catch (ParseException e) {
+                    sharedValues.getCallbacks().printError(e.getMessage());
+                }
                 return Boolean.TRUE;
             }
 
@@ -204,33 +255,5 @@ class CommentsPanel extends JScrollPane {
                 //we don't need to do any cleanup so this is empty
             }
         }.execute();
-    }
-}
-
-class CommentPanel extends JPanel {
-
-    private RequestComment comment;
-
-    CommentPanel(RequestComment comment) {
-        this.comment = comment;
-        setLayout(new BorderLayout());
-        setSize(new Dimension(400, 120));
-        JPanel statusPane = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        statusPane.add(new JLabel(comment.getUserWhoCommented() + " - " + comment.getTimeOfComment()));
-        add(statusPane, BorderLayout.PAGE_START);
-        add(new JLabel(comment.getComment()), BorderLayout.CENTER);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CommentPanel that = (CommentPanel) o;
-        return Objects.equals(comment, that.comment);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(comment);
     }
 }
