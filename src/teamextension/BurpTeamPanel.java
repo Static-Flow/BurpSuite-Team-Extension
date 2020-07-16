@@ -55,15 +55,16 @@ extends JPanel {
         this.theirAddress.setText(this.sharedValues.getCallbacks().loadExtensionSetting("servername"));
         this.theirPort.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverport"));
         this.serverPassword.setText(this.sharedValues.getCallbacks().loadExtensionSetting("serverpass"));
-        if (this.sharedValues.getCallbacks().loadExtensionSetting("certificatePath") != null) {
-            this.sharedValues.setCertFile(new File(this.sharedValues
-             .getCallbacks().loadExtensionSetting("certificatePath")));
-            this.chosenCertLabel.setText("Cert Set");
-            this.sharedValues.setCertKeyFile(new File(this.sharedValues
-             .getCallbacks().loadExtensionSetting("certificateKeyPath")));
-            this.chosenCertKeyLabel.setText("Key Set");
-            this.startButton.setEnabled(true);
-        }
+        //Loading these from the settings seems problimatic
+//        if (this.sharedValues.getCallbacks().loadExtensionSetting("certificatePath") != null) {
+//            this.sharedValues.setCertFile(new File(this.sharedValues
+//             .getCallbacks().loadExtensionSetting("certificatePath")));
+//            this.chosenCertLabel.setText("Cert Set");
+//            this.sharedValues.setCertKeyFile(new File(this.sharedValues
+//             .getCallbacks().loadExtensionSetting("certificateKeyPath")));
+//            this.chosenCertKeyLabel.setText("Key Set");
+//            this.startButton.setEnabled(true);
+//        }
     }
 
     void enableRoomControl() {
@@ -861,7 +862,7 @@ extends JPanel {
     }
 
     private String generateHTMLLink(HttpRequestResponse burpMessage) {
-        return "<a href='http://burptcmessage/" +
+        return "<a href='https://burptcmessage/" +
                 Base64.getEncoder().encodeToString(this.sharedValues.getGson().toJson(burpMessage).getBytes())
                 + "'>" + this.sharedValues.getCallbacks().getHelpers().analyzeRequest(burpMessage).getUrl().toString()
                 + "</a>";

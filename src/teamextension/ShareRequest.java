@@ -14,13 +14,13 @@ class SharedRequest {
         this.requestResponse = burpMessage;
         this.datetime = datetime;
         byte[] rawBytes = stripBurpMessage(burpMessage);
-        this.link = "burptcmessage/" +
+        this.link = "https://burptcmessage/" +
                         Base64.getEncoder().encodeToString(compress(new String(rawBytes)));
     }
 
     SharedRequest(String link, String datetime) {
         this.datetime = datetime;
-        this.link = "burptcmessage/shortener/"+link;
+        this.link = "https://burptcmessage/shortener/"+link;
     }
 
     HttpRequestResponse getRequestResponse() {
