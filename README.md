@@ -3,10 +3,10 @@
 This Burpsuite plugin allows for multiple testers to share live/historical proxy requests, scope and repeater/intruder payloads with each other in real time allowing for truly collaborative web app testing. When connected to the Team Sever and in a Team Room all requests coming through your Burp client are shared with the other testers in the room and vice-versa!
 
 ## Request from clients to target propegated to other clients
-![Image of Request being made](https://github.com/AonCyberLabs/BurpSuite-Team-Extension/blob/master/images/request.png)
+![Image of Request being made](https://github.com/Static-Flow/BurpSuite-Team-Extension/blob/master/images/request.png)
 
 ## Response from target to clients propegated to other clients
-![Image of Request being made](https://github.com/AonCyberLabs/BurpSuite-Team-Extension/blob/master/images/response.png)
+![Image of Request being made](https://github.com/Static-Flow/BurpSuite-Team-Extension/blob/master/images/response.png)
 
 # Features
 
@@ -49,8 +49,8 @@ There are two parts that make this collaborative web app testing possible. 1st i
 # How to start the Server
 
 ```
-go get github.com/AonCyberLabs/BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
-cd ~/go/src/github.com/AonCyberLabs/BurpSuiteTeamServer/
+go get github.com/Static-Flow/BurpSuiteTeamServer/cmd/BurpSuiteTeamServer
+cd ~/go/src/github.com/Static-Flow/BurpSuiteTeamServer/
 go get ./...
 go install ./...
 ~/go/bin/BurpSuiteTeamServer -h
