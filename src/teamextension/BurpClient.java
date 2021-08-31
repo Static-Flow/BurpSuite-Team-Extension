@@ -58,6 +58,7 @@ class BurpClient {
 
             @Override
             public void onMessage(String message) {
+                sharedValues.getCallbacks().printOutput(message);
                 try {
                     BurpTCMessage burpTCMessage =
                             sharedValues.getGson().fromJson(new String(
@@ -109,8 +110,7 @@ class BurpClient {
     }
 
     private void parseBurpTCMessage(BurpTCMessage burpTCMessage) {
-        sharedValues.getCallbacks().printOutput("got: " + burpTCMessage +
-                "\n");
+        sharedValues.getCallbacks().printOutput("got: " + burpTCMessage + "\n");
         switch (burpTCMessage.getMessageType()) {
             case COOKIE_MESSAGE:
                 if (this.sharedValues.getBurpPanel().getReceiveSharedCookiesSetting()) {
@@ -257,8 +257,8 @@ class BurpClient {
     }
 
 
-    void checkRoomPassword(String roomName, String roomPassword) {
-        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.CHECK_PASSWORD_MESSAGE, roomName, roomPassword);
+    void joinRoomWithPassword(String roomName, String roomPassword) {
+        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.JOIN_ROOM_MESSAGE, roomName, roomPassword);
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
     }

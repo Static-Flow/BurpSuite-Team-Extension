@@ -14,7 +14,6 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
 import java.util.Base64;
 
 public class BurpTeamPanel
@@ -404,7 +403,7 @@ extends JPanel {
                     String roomPasswordValue = JOptionPane.showInputDialog(roomOptions, "Please enter room password");
                     sharedValues.getCallbacks().printOutput(roomPasswordValue);
                     if ((roomPasswordValue != null) && (roomPasswordValue.length() > 0)) {
-                        sharedValues.getClient().checkRoomPassword(serverList.getSelectedValue().getRoomName(), roomPasswordValue);
+                        sharedValues.getClient().joinRoomWithPassword(serverList.getSelectedValue().getRoomName(), roomPasswordValue);
                     } else {
                         writeToAlertPane("Please supply a password for the room.");
                     }
