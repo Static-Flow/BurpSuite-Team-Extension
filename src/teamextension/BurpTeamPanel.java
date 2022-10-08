@@ -262,18 +262,20 @@ extends JPanel {
         gridBagConstraints.gridy = 0;
         add(infoPanel, gridBagConstraints);
         infoPanel.setLayout(new GridLayout(1, 1, 0, 0));
-        JLabel explainer = new JLabel();
-        explainer.setHorizontalAlignment(SwingConstants.CENTER);
+        JTextArea explainer = new JTextArea();
+        explainer.setLineWrap(true);
+        explainer.setWrapStyleWord(true);
+        explainer.setEditable(false);
+        //explainer.setHorizontalAlignment(SwingConstants.CENTER);
+        explainer.setText("Welcome to Burp Suite Team Collaborator!\n" +
+                "This extension allows you to work in tandem with multiple BurpSuite users by sharing their requests with you.\n" +
+                "Any request that comes through their proxy will show up in your site map as well!");
         infoPanel.add(explainer);
-        explainer.setText("<html>Welcome to the Burp Suite Team " +
-                "Collaborator! <br>This extension allows you to work in " +
-                "tandem with multiple BurpSuite users by sharing their requests " +
-                "with you. Any request that comes through their proxy will " +
-                "show up in your site map as well.</html>\n");
+
 
         JPanel statusPanel = generatePanel(0, "Server Alerts");
         statusPanel.setLayout(new BorderLayout(0, 0));
-        
+
         statusText = new JTextPane();
         statusText.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(statusText);
@@ -667,11 +669,12 @@ extends JPanel {
             }
 
             @Override
-            public void ancestorMoved(AncestorEvent event)  {
+            public void ancestorMoved(AncestorEvent event) {
                 //Not needed
             }
         });
-        optionsPane.addTab("Comments", commentsScrollPane);
+        //disabling comments. Not convinced it's all that useful, may revisit.
+        //optionsPane.addTab("Comments", commentsScrollPane);
         //end comments panel
 
     }
