@@ -41,14 +41,14 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
             BurpTCMessage intruderMessage = new BurpTCMessage(
                     httpRequestResponse, MessageType.INTRUDER_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
                     SharedValues.ROOM :
-                    sendingContextArgument, null);
+                    sendingContextArgument);
             sharedValues.getClient().sendMessage(intruderMessage);
         } else if (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST) { //repeater
             httpRequestResponse = new HttpRequestResponse(invocation.getSelectedMessages()[0]);
             BurpTCMessage repeaterMessage = new BurpTCMessage(
                     httpRequestResponse, MessageType.REPEATER_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
                     SharedValues.ROOM :
-                    sendingContextArgument, null);
+                    sendingContextArgument);
             sharedValues.getClient().sendMessage(repeaterMessage);
         } else {                                                                                                //sending generics
             for (IHttpRequestResponse reqResp : invocation.getSelectedMessages()) {
@@ -58,7 +58,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                     //is bottom level request
                     BurpTCMessage burpTCMessage = new BurpTCMessage(
                             httpRequestResponse, MessageType.BURP_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
-                            SharedValues.ROOM : sendingContextArgument, null);
+                            SharedValues.ROOM : sendingContextArgument);
                     sharedValues.getClient().sendMessage(burpTCMessage);
                 } else {
                     for (IHttpRequestResponse iHttpRequestResponse : sharedValues.getCallbacks().getSiteMap(
@@ -66,7 +66,7 @@ public class ManualRequestSenderContextMenu implements IContextMenuFactory {
                         if (iHttpRequestResponse.getResponse() != null) {
                             BurpTCMessage burpTCMessage = new BurpTCMessage(
                                     new HttpRequestResponse(iHttpRequestResponse), MessageType.BURP_MESSAGE, sendingContext == CONTEXT_SEND_TO_GROUP ?
-                                    SharedValues.ROOM : sendingContextArgument, null);
+                                    SharedValues.ROOM : sendingContextArgument);
                             sharedValues.getClient().sendMessage(burpTCMessage);
                         }
                     }

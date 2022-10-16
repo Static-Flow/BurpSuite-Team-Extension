@@ -11,7 +11,8 @@ public enum MessageType {
     ADD_ROOM_MESSAGE, //For adding a new room
     JOIN_ROOM_MESSAGE, //For joining a room
     LEAVE_ROOM_MESSAGE, //For leaving a room
-    SYNC_SCOPE_MESSAGE, //For syncing scope between clients
+    SET_SCOPE_MESSAGE, //For setting scope of a room
+    GET_SCOPE_MESSAGE, //For getting scope of a room
     SCAN_ISSUE_MESSAGE, //For new scan issues
     COOKIE_MESSAGE,     //For new cookies
     COMMENT_MESSAGE,    //For sending new comments
@@ -19,6 +20,7 @@ public enum MessageType {
     BAD_PASSWORD_MESSAGE, //If we entered a wrong room password
     GOOD_PASSWORD_MESSAGE, //successfully auth-ed
     GET_CONFIG_MESSAGE, //For retrieving server config
+    ROOM_EXISTS_MESSAGE, //For when a room already exists with a provided name
     ;
 
 }

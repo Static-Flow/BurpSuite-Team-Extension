@@ -29,12 +29,12 @@ extends JPanel {
     private JList<Room> serverList;
     private JList<String> roomMemberList;
     private JTextPane statusText;
-    private JButton pauseButton;
-    private JButton newRoom;
-    private JButton leaveRoom;
-    private JButton setScopeButton;
+    JButton pauseButton;
+    JButton newRoom;
+    JButton leaveRoom;
+    JButton setScopeButton;
     private JButton getScopeButton;
-    private JButton muteAllButton;
+    JButton muteAllButton;
     private JButton saveConfigButton;
     private JCheckBox shareAllBurpMessages;
     private JCheckBox receiveCookies;
@@ -410,7 +410,7 @@ extends JPanel {
                         writeToAlertPane("Please supply a password for the room.");
                     }
                 } else {
-                    joinRoom();
+                    sharedValues.getClient().joinRoom(serverList.getSelectedValue().getRoomName());
                 }
                 return Boolean.TRUE;
             }
@@ -882,7 +882,6 @@ extends JPanel {
     }
 
     void joinRoom() {
-        this.sharedValues.getClient().joinRoom(serverList.getSelectedValue().getRoomName());
         this.newRoom.setEnabled(false);
         this.leaveRoom.setEnabled(true);
         this.pauseButton.setEnabled(true);

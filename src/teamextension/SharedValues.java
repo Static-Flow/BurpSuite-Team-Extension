@@ -123,8 +123,7 @@ public class SharedValues {
                             newItems.add(new Cookie(cookie));
                         }
                     }
-                    BurpTCMessage cookieMessage = new BurpTCMessage(null, MessageType.COOKIE_MESSAGE,
-                            ROOM, getGson().toJson(newItems, cookieJsonListType));
+                    BurpTCMessage cookieMessage = new BurpTCMessage(null, MessageType.COOKIE_MESSAGE, getGson().toJson(newItems, cookieJsonListType));
                     getClient().sendMessage(cookieMessage);
                     return Boolean.TRUE;
                 }

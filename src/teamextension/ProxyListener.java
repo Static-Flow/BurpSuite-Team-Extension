@@ -4,8 +4,6 @@ import burp.IHttpService;
 import burp.IInterceptedProxyMessage;
 import burp.IProxyListener;
 
-import static teamextension.SharedValues.ROOM;
-
 public class ProxyListener implements IProxyListener {
 
     private SharedValues sharedValues;
@@ -28,7 +26,7 @@ public class ProxyListener implements IProxyListener {
             if (this.sharedValues.getBurpPanel().getShareAllRequestsSetting() ||
                     this.sharedValues.getCallbacks().isInScope(this.sharedValues.getCallbacks().getHelpers().analyzeRequest(iInterceptedProxyMessage.getMessageInfo()).getUrl())) {
                 HttpRequestResponse httpRequestResponse = new HttpRequestResponse(iInterceptedProxyMessage.getMessageInfo());
-                BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE, ROOM, null);
+                BurpTCMessage burpMessage = new BurpTCMessage(httpRequestResponse, MessageType.BURP_MESSAGE, null);
                 this.sharedValues.getClient().sendMessage(burpMessage);
             }
             if (this.sharedValues.getBurpPanel().getShareCookiesSetting()) {

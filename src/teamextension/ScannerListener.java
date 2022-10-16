@@ -37,8 +37,7 @@ public class ScannerListener implements IScannerListener {
                         issue.getConfidence(), issue.getRemediationDetail());
                 if (decodedIssue.getRemediationDetail() == null || !decodedIssue.getRemediationDetail().equals("true")) {
                     sharedValues.getClient().sendMessage(new BurpTCMessage(null,
-                            MessageType.SCAN_ISSUE_MESSAGE, SharedValues.ROOM,
-                            this.sharedValues.getGson().toJson(decodedIssue)));
+                            MessageType.SCAN_ISSUE_MESSAGE, this.sharedValues.getGson().toJson(decodedIssue)));
                 }
             }
         }

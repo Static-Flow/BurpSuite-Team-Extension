@@ -136,7 +136,7 @@ class BurpClient {
                     this.sharedValues.getCallbacks().addScanIssue(decodedIssue);
                 }
                 break;
-            case SYNC_SCOPE_MESSAGE:
+            case GET_SCOPE_MESSAGE:
                 try {
                     this.sharedValues.getCallbacks().loadConfigFromJson(burpTCMessage.getData());
                 } catch (Exception e) {
@@ -180,7 +180,7 @@ class BurpClient {
                 if (burpTCMessage.getData().length() > 0) {
                     for (String member : burpTCMessage.getData().split(",")) {
                         String[] roomValues = member.split("::");
-                        this.sharedValues.getServerListModel().addElement(new Room(roomValues[0], Boolean.valueOf(roomValues[1])));
+                        this.sharedValues.getServerListModel().addElement(new Room(roomValues[0], Boolean.parseBoolean(roomValues[1])));
                     }
                 }
                 break;
@@ -211,10 +211,18 @@ class BurpClient {
                 String shortenerApiKey = burpTCMessage.getData();
                 sharedValues.getCallbacks().printOutput("API " +
                         "Key: " + shortenerApiKey);
-                if(shortenerApiKey.length() != 0) {
+                if (shortenerApiKey.length() != 0) {
                     sharedValues.setUrlShortenerApiKey(shortenerApiKey);
                 }
-
+                break;
+            case ROOM_EXISTS_MESSAGE:
+                JOptionPane.showMessageDialog(this.sharedValues.getBurpPanel(), "The room name you submit already exists.");
+                sharedValues.getBurpPanel().swapServerAndRoomLists(false);
+                sharedValues.getBurpPanel().muteAllButton.setEnabled(false);
+                sharedValues.getBurpPanel().setScopeButton.setEnabled(false);
+                sharedValues.getBurpPanel().newRoom.setEnabled(true);
+                sharedValues.getBurpPanel().leaveRoom.setEnabled(false);
+                sharedValues.getBurpPanel().pauseButton.setEnabled(false);
                 break;
             default:
                 this.sharedValues.getCallbacks().printOutput("Bad msg type");
@@ -223,81 +231,73 @@ class BurpClient {
 
 
     void muteMember(String selectedValue) {
-        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.MUTE_MESSAGE,
-                selectedValue, null);
+        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.MUTE_MESSAGE, selectedValue);
         this.sendMessage(muteMessage);
         this.addMutedClient(selectedValue);
     }
 
     void unmuteMember(String selectedValue) {
-        BurpTCMessage unmuteMessage = new BurpTCMessage(null, MessageType.UNMUTE_MESSAGE,
-                selectedValue, null);
+        BurpTCMessage unmuteMessage = new BurpTCMessage(null, MessageType.UNMUTE_MESSAGE, selectedValue);
         this.sendMessage(unmuteMessage);
         this.removeMutedClient(selectedValue);
     }
 
     void createRoom(String roomName, String roomPassword) {
-        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.ADD_ROOM_MESSAGE, roomName, roomPassword);
+        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.ADD_ROOM_MESSAGE, roomName + ":" + roomPassword);
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
     }
 
     void leaveRoom() {
         BurpTCMessage newRoomMessage;
-        newRoomMessage = new BurpTCMessage(null,
-                MessageType.LEAVE_ROOM_MESSAGE, SERVER, null);
+        newRoomMessage = new BurpTCMessage(null, MessageType.LEAVE_ROOM_MESSAGE, null);
         this.sendMessage(newRoomMessage);
         this.currentRoom = SERVER;
     }
 
     void joinRoom(String roomName) {
-        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.JOIN_ROOM_MESSAGE, roomName, null);
+        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.JOIN_ROOM_MESSAGE, roomName);
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
+        this.sharedValues.getBurpPanel().joinRoom();
     }
 
 
     void joinRoomWithPassword(String roomName, String roomPassword) {
-        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.JOIN_ROOM_MESSAGE, roomName, roomPassword);
+        BurpTCMessage newRoomMessage = new BurpTCMessage(null, MessageType.JOIN_ROOM_MESSAGE, roomName + ":" + roomPassword);
         this.currentRoom = roomName;
         this.sendMessage(newRoomMessage);
     }
 
     private void getConfigMessage() {
-        BurpTCMessage getConfigMessage = new BurpTCMessage(null,
-                MessageType.GET_CONFIG_MESSAGE, "Self", null);
+        BurpTCMessage getConfigMessage = new BurpTCMessage(null, MessageType.GET_CONFIG_MESSAGE, null);
         this.sendMessage(getConfigMessage);
     }
 
 
     private void getRoomsMessage() {
-        BurpTCMessage getRoomsMessage = new BurpTCMessage(null,
-                MessageType.GET_ROOMS_MESSAGE, "Self", null);
+        BurpTCMessage getRoomsMessage = new BurpTCMessage(null, MessageType.GET_ROOMS_MESSAGE, null);
         this.sendMessage(getRoomsMessage);
     }
 
     void setRoomScope() {
-        BurpTCMessage syncScopeMessage = new BurpTCMessage(null, MessageType.SYNC_SCOPE_MESSAGE,
-                SharedValues.ROOM, this.sharedValues.getCurrentScope());
-        this.sharedValues.getCallbacks().printOutput(syncScopeMessage.toString());
-        this.sendMessage(syncScopeMessage);
+        BurpTCMessage setScopeMessage = new BurpTCMessage(null, MessageType.SET_SCOPE_MESSAGE, this.sharedValues.getCurrentScope());
+        this.sharedValues.getCallbacks().printOutput(setScopeMessage.toString());
+        this.sendMessage(setScopeMessage);
     }
 
     void getRoomScope() {
-        BurpTCMessage syncScopeMessage = new BurpTCMessage(null,
-                MessageType.SYNC_SCOPE_MESSAGE, "Self", null);
-        this.sendMessage(syncScopeMessage);
+        BurpTCMessage getScopeMessage = new BurpTCMessage(null, MessageType.GET_SCOPE_MESSAGE, null);
+        this.sendMessage(getScopeMessage);
     }
 
     void muteAllMembers() {
-        BurpTCMessage muteMessage = new BurpTCMessage(null,
-                MessageType.MUTE_MESSAGE, "All", null);
+        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.MUTE_MESSAGE, "All");
         this.sendMessage(muteMessage);
     }
 
     void unmuteAllMembers() {
-        BurpTCMessage muteMessage = new BurpTCMessage(null,
-                MessageType.UNMUTE_MESSAGE, "All", null);
+        BurpTCMessage muteMessage = new BurpTCMessage(null, MessageType.UNMUTE_MESSAGE, "All");
         this.sendMessage(muteMessage);
     }
 
@@ -327,7 +327,7 @@ class BurpClient {
     void sendCommentMessage(HttpRequestResponse requestResponseWithComments) {
         BurpTCMessage commentMessage =
                 new BurpTCMessage(requestResponseWithComments,
-                MessageType.COMMENT_MESSAGE, SharedValues.ROOM, Integer.toString(requestResponseWithComments.hashCode()));
+                        MessageType.COMMENT_MESSAGE, Integer.toString(requestResponseWithComments.hashCode()));
         this.sendMessage(commentMessage);
     }
 
